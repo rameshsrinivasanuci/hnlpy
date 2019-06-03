@@ -11,6 +11,8 @@ import h5py
 import numpy as np
 import pandas as pd
 import csv
+from itertools import zip_longest
+
 
 f = h5py.File('s181_ses1_task3_expinfo.mat')
 
@@ -43,11 +45,21 @@ for kk in iters:
         else:
             condition_list.append(jj[0])
 
-var_dict = {'rt':rt_list,
-            'correct':correct_list,
-            'condition':condition_list}
 
-pd.Series(var_dict)
+data = [rt_list, correct_list, condition_list]
+
+export_data = zip_longest(*data, fillvalue='')
+with open('prac_w_csv.csv', 'w', encoding = 'ISO-8859_1', newline='') as csvFile:
+    wr = csv.writer(csvFile)
+    wr.writerow(('rt', 'correct', 'condition'))
+    wr.writerows(export_data)
+
+csvFile.close()
+
+# var_dict = {'rt':rt_list,
+            # 'correct':correct_list,
+            # 'condition':condition_list}
+
 
 # can take matlab dict and convert to pandas data structure
 # pd.Series(arrays) BUT...
@@ -60,22 +72,3 @@ pd.Series(var_dict)
 # separation in spatial freq
 # correct -- response
 
-
-
-# figure out the array conversion
-
-
-'''
-for i in arrays.keys():
-    data = arrays[i]
-
-    if i == 'rt':
-
-    elif i == 'correct':
-
-    elif i == 'condition':
-'''
-
-
-# see if you can take everything out of the narray func into a normal list
-# then use the dict function in pd.Series
