@@ -13,21 +13,20 @@ cwd = os.getcwd()
 print('Current Directory: ', cwd)
 
 # change directory
-new_dir = '/data/pdmattention/task3' #type file path for new directory with data
-save_dir = '/data/pdmattention'
-os.chdir(new_dir)
+new_dir = '/data/pdmattention/task3/' #type file path for new directory with data
+save_dir = '/data/pdmattention/'
+# os.chdir(new_dir)
 print('Current Directory: ', os.getcwd())
 
 # get the files in the target directory
 # file names are stored in variable sub_files 
 # subject ids are stored in variable sub_IDs
-data_files = os.listdir(cwd)
-
+data_files = os.listdir(new_dir)
 sub_files = []
 sub_IDs = []
 
 for cur_file in data_files: # iterates through every file in directory
-	if os.path.isfile(cur_file) == True: # checks to see if file is a file
+	# if os.path.isfile(cur_file) == True: # checks to see if file is a file
 		if cur_file[16:27] == 'expinfo.mat': # specifies the file type
 			sub_files.append(cur_file)
 			sub_IDs.append(cur_file[0:4])
@@ -40,7 +39,7 @@ for sub in range(len(sub_files)):
 	arrays = {}
 
 	# opens file and extracts all data using numpy 
-	f = h5py.File(current_sub)
+	f = h5py.File(new_dir + current_sub)
 	for k, v in f.items():
 		arrays[k] = np.array(v)
 
@@ -72,10 +71,11 @@ for sub in range(len(sub_files)):
 		                                       # with fillvalue
 
 	# change to directory you want csv file to be saved in 
-	os.chdir(save_dir)
+	#os.chdir(save_dir)
+	# os.chdir(cwd)
 	
 	if sub == 0:
-		with open('TestData.csv', 'w', encoding = 'ISO-8859_1', newline='') as csvFile:
+		with open('/data/pdmattention/TestData.csv', 'w', encoding = 'ISO-8859_1', newline='') as csvFile:
 			wr = csv.writer(csvFile) # returns a writer object responsible for
 						 # converting
 		                             # the user's data into strings; we can use this
@@ -86,11 +86,11 @@ for sub in range(len(sub_files)):
 
         		
 	else:
-		with open('TestData.csv','a', encoding = 'ISO-8859_1', newline='') as csvFile:
+		with open('/data/pdmattention/TestData.csv','a', encoding = 'ISO-8859_1', newline='') as csvFile:
 			wr = csv.writer(csvFile)
 			wr.writerows(export_data)
         		
 		
-	os.chdir(new_dir) # change directory back to where data is
+	# os.chdir(new_dir) # change directory back to where data is
 
 	

@@ -28,7 +28,7 @@ print('HDDM VER:', hddm.__version__) # check
 
 def main():
 
-    data = hddm.load_csv('TestData.csv')
+    data = hddm.load_csv('/data/pdmattention/TestData.csv')
     data.head(10) # returns first n rows for the object based on position
 
     # data = hddm.utils.flip_errors(data) # flips sign for lower boundary
@@ -52,7 +52,7 @@ def main():
        for i, subj_data in data.groupby('subj_idx'):
             subj_data.rt.hist(bins=20, histtype='step', ax=ax)
 
-    plt.savefig('hddm_demo_fig_00.pdf')
+    plt.savefig('/data/pdmattention/hddm_fig1.pdf')
     plt.show()
 
     # time.sleep(5)
