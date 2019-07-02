@@ -14,6 +14,7 @@ print('Current Directory: ', cwd)
 
 # change directory
 new_dir = '/data/pdmattention/task3' #type file path for new directory with data
+save_dir = '/data/pdmattention'
 os.chdir(new_dir)
 print('Current Directory: ', os.getcwd())
 
@@ -71,7 +72,7 @@ for sub in range(len(sub_files)):
 		                                       # with fillvalue
 
 	# change to directory you want csv file to be saved in 
-	os.chdir(cwd)
+	os.chdir(save_dir)
 	
 	if sub == 0:
 		with open('TestData.csv', 'w', encoding = 'ISO-8859_1', newline='') as csvFile:
