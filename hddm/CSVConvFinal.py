@@ -28,8 +28,12 @@ sub_IDs = []
 for cur_file in data_files: # iterates through every file in directory
 	# if os.path.isfile(cur_file) == True: # checks to see if file is a file
 		if cur_file[16:27] == 'expinfo.mat': # specifies the file type
-			sub_files.append(cur_file)
-			sub_IDs.append(cur_file[0:4])
+			check = cur_file[0:4]
+			if ( check != 's184' and check != 's187' and check != 's190' and check != 's193' and check != 's199' and check != 's209' and \
+				check != 's214' and check != 's220' and check != 's225' and check != 's228' and check != 's234' and check != 's240'):
+
+				sub_files.append(cur_file)
+				sub_IDs.append(cur_file[0:4])
 
 # goes through every subject and extracts data 
 for sub in range(len(sub_files)):
