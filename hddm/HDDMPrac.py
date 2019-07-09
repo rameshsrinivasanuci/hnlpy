@@ -28,6 +28,7 @@ print('HDDM VER:', hddm.__version__) # check
 
 def main():
 
+    # data = hddm.load_csv('/data/pdmattention/TestData.csv')
     data = hddm.load_csv('/data/pdmattention/TestData.csv')
     data.head(10) # returns first n rows for the object based on position
 
