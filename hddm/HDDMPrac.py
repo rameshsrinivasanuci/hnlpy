@@ -36,10 +36,10 @@ def main():
                                         # response --> what are lower
                                         # boundaries
 
-    fig = plt.figure() # creates an empty figure
-    ax = fig.add_subplot(111, xlabel = 'RT', ylabel='count', title='RT distributions')
+#    fig = plt.figure() # creates an empty figure
+#    ax = fig.add_subplot(111, xlabel = 'RT', ylabel='count', title='RT distributions')
 
-    for i, subj_data in data.groupby('subj_idx'):
+#    for i, subj_data in data.groupby('subj_idx'):
 
         # data.groupby splits that data into the groups based on some criterion
         # grouped = obj.groupby(key)
@@ -50,22 +50,26 @@ def main():
         # the column subj_idx
         
         
-       for i, subj_data in data.groupby('subj_idx'):
-            subj_data.rt.hist(bins=20, histtype='step', ax=ax)
+#       for i, subj_data in data.groupby('subj_idx'):
+#            subj_data.rt.hist(bins=20, histtype='step', ax=ax)
 
-    plt.savefig('/data/pdmattention/hddm_fig1.pdf')
-    plt.show()
+#    plt.savefig('/data/pdmattention/hddm_fig1.pdf')
+#    plt.show()
 
     # time.sleep(5)
-    print('\n')
-    print('Done!')
+#    print('\n')
+#    print('Done!')
 
     next_step(data)
 
 def next_step(data):
-    print('working... \n')
+#    print('working... \n')
     m = hddm.HDDM(data)
-
+# 3 param a t v 
+# v -drift
+# t - nondec time -- may not depend upon diff
+# a - boundary sep
+# run a version with dependence of condition 
     # find a good starting point which helps with convergence
     print('finding starting values... \n')
     m.find_starting_values() # Find good starting values for optimization
@@ -74,18 +78,19 @@ def next_step(data):
     print('\n')
     print('starting values found... \n')
     # starting drawing 7000 samples and discardin 5000 as burn-in
-    m.sample(2000, burn=20) # posterior samples
+    m.sample(5000, burn=500) # posterior samples
 
     print('generating stats... \n')
     stats = m.gen_stats()
     stats[stats.index.isin(['a', 'a_std', 'a_subj.0', 'a_subj.1'])]
-
+# confirm that post for v
+# confirm for all a t v for subs
     print('printing stats... \n')
     m.print_stats()
 
     print('\n')
     
-    m.plot_posteriors(['a', 't'])
+    m.plot_posteriors(['a', 't','v'])
 
 
     m.plot_posterior_predictive(figsize=(14, 10))
@@ -95,17 +100,17 @@ def next_step(data):
 
     time.sleep(5)
 
-    models = []
+#    models = []
     
-    for i in range(5):
-        m = hddm.HDDM(data)
-        m.find_starting_values()
-        m.sample(5000, burn=20)
-        models.append(m)
+#    for i in range(5):
+#        m = hddm.HDDM(data)
+#        m.find_starting_values()
+#        m.sample(5000, burn=20)
+#        models.append(m)
 
-    hddm.analyze.gelman_rubin(models)
+#    hddm.analyze.gelman_rubin(models)
 
-    m.plot_posterior_predictive(figsize=(14, 10))
+#    m.plot_posterior_predictive(figsize=(14, 10))
 if __name__ == '__main__':
     main()
 
