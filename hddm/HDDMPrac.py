@@ -6,7 +6,7 @@
 ''' in Anaconda Prompt Type
 
 >>> activate snakes # activates environment which contains Python 3.5
->>> cd Documents\Python_Projects
+>>> cd Documents Python_Projects
 >>> python HDDMPrac.py
 
 '''
@@ -64,7 +64,11 @@ def main():
 
 def next_step(data):
 #    print('working... \n')
-    m = hddm.HDDM(data)
+    #m = hddm.HDDM(data)
+    m = hddm.HDDM(data, depends_on={'v':'condition'})
+    #m = hddm.HDDM(data, depends_on={'t','rt'})
+    #m = hddm.HDDM(data, depends_on={'a','correct'})
+
 # 3 param a t v 
 # v -drift
 # t - nondec time -- may not depend upon diff
@@ -78,13 +82,15 @@ def next_step(data):
     print('\n')
     print('starting values found... \n')
     # starting drawing 7000 samples and discardin 5000 as burn-in
-    m.sample(5000, burn=500) # posterior samples
-
+    #m.sample(5000, burn=500) # posterior samples
+    m.sample(1000, burn=20)
     print('generating stats... \n')
     stats = m.gen_stats()
-    stats[stats.index.isin(['a', 'a_std', 'a_subj.0', 'a_subj.1'])]
-# confirm that post for v
-# confirm for all a t v for subs
+
+    # confirm that post for v
+	# confirm for all a t v for subs
+    stats[stats.index.isin(['a', 'a_std', 'a_subj.0', 't', 't_std', 't_subj.0', 'v', 'v_std', 'v_subj.0'])]
+
     print('printing stats... \n')
     m.print_stats()
 
@@ -95,10 +101,12 @@ def next_step(data):
 
     m.plot_posterior_predictive(figsize=(14, 10))
     print('Legend: Red = Indiv Subject; Blue = Prediction')
+
+    # hddm.HDDM.save(m, 'OutputModel') unsuccessful
     # shows how well the model fits the data
     # red is subj
 
-    time.sleep(5)
+    # time.sleep(5)
 
 #    models = []
     
