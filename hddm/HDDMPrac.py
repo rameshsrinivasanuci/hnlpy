@@ -83,8 +83,8 @@ def next_step(data):
     print('\n')
     print('starting values found... \n')
     # starting drawing 7000 samples and discardin 5000 as burn-in
-    #m.sample(5000, burn=500) # posterior samples
-    m.sample(1000, burn=20) # smaller sample to test
+    m.sample(5000, burn=500) # posterior samples
+    #m.sample(1000, burn=20) # smaller sample to test
     print('generating stats... \n')
     stats = m.gen_stats()
 
