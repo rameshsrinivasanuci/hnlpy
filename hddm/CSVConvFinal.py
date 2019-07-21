@@ -11,6 +11,7 @@ import os
 import csv
 from itertools import zip_longest 
 import math
+import SortRts
 
 # get // check current directory
 cwd = os.getcwd()
@@ -40,7 +41,7 @@ for cur_file in data_files: # iterates through every file in directory
 
 			check = cur_file[0:4]
 			if ( check != 's184' and check != 's187' and check != 's190' and check != 's193' and check != 's199' and check != 's209' and \
-				check != 's214' and check != 's220' and check != 's225' and check != 's228' and check != 's234' and check != 's240'):
+				check != 's214' and check != 's220' and check != 's225' and check != 's228' and check != 's234' and check != 's240' and check != 's213'):
 
 				sub_files.append(cur_file)
 				sub_IDs.append(cur_file[0:4])
@@ -71,6 +72,8 @@ for sub in range(len(sub_files)):
 	rts = arrays['rt']
 	conditions = arrays['condition']
 	corrects = arrays['correct']
+
+	# call SortRTs
 
 	# extracts all data and puts data in a list
 	for ii in range(len(rts)):
@@ -121,7 +124,7 @@ for sub in range(len(sub_files)):
 		
 	# os.chdir(new_dir) # change directory back to where data is
 
-
+'''
 # second for loop to create a file with all subject data
 # written to TestDataAllSubs.csv
 	
@@ -197,7 +200,7 @@ for sub in range(len(all_subfiles)):
 			wr = csv.writer(csvFile)
 			wr.writerows(export_data)
 
-
+'''
 
 
 with open('/data/pdmattention/NaNIndices_ExcludeSub.csv', 'w') as f:
@@ -207,6 +210,7 @@ with open('/data/pdmattention/NaNIndices_ExcludeSub.csv', 'w') as f:
 	data = [dict(zip(fieldnames, [k,v])) for k, v in nantrial_dict_exsub.items()]
 	writer.writerows(data)
 
+'''
 with open('/data/pdmattention/NaNIndices_AllSub.csv', 'w') as f:
 	fieldnames = ['subj_id', 'indices']
 	writer = csv.DictWriter(f, fieldnames = fieldnames)
@@ -214,5 +218,5 @@ with open('/data/pdmattention/NaNIndices_AllSub.csv', 'w') as f:
 	data = [dict(zip(fieldnames, [k,v])) for k, v in nantrial_dict_allsub.items()]
 	writer.writerows(data)
 
-
+'''
 	
