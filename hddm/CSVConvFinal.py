@@ -9,9 +9,9 @@ import h5py
 import numpy as np 
 import os
 import csv
-from itertools import zip_longest 
+from itertools import izip_longest 
 import math
-import SortRts
+import SortRTs
 
 # get // check current directory
 cwd = os.getcwd()
@@ -73,8 +73,6 @@ for sub in range(len(sub_files)):
 	conditions = arrays['condition']
 	corrects = arrays['correct']
 
-	# call SortRTs
-
 	# extracts all data and puts data in a list
 	for ii in range(len(rts)):
 		
@@ -89,13 +87,15 @@ for sub in range(len(sub_files)):
 			indices1.append(ii) # makes a list of the index of nan trials per sub
 
 
+	[updt_rts, srtd_indices] = SortRTs.sortrt(rt_list)
+
 	# puts nan indices in dictionary
 	nantrial_dict_exsub[current_sub[0:4]] = indices1 
 
 	data = [sub_list, condition_list, rt_list, correct_list]
 
 	# zips lists together, making it easier to write to csv file
-	export_data = zip_longest(*data, fillvalue='') # zip_longest makes an iterator 
+	export_data = izip_longest(*data, fillvalue='') # zip_longest makes an iterator 
 		                                       # that aggregates elements from
 		                                       # each of the iterables; if uneven
 		                                       # missing values are filled-in
@@ -106,18 +106,16 @@ for sub in range(len(sub_files)):
 	# os.chdir(cwd)
 	
 	if sub == 0:
-		with open('/data/pdmattention/TestData.csv', 'w', encoding = 'ISO-8859_1', newline='') as csvFile:
+		with open('/data/pdmattention/TestData.csv', 'w') as csvFile:
 			wr = csv.writer(csvFile) # returns a writer object responsible for
-						 # converting
-		                             # the user's data into strings; we can use this
-		                             # object to manipulate excel files
+							 # converting
+			                 # the user's data into strings; we can use this
+			                 # object to manipulate excel files
 
-			wr.writerow(('subj_idx', 'condition', 'rt', 'correct')) # writes the  											# headers
+			wr.writerow(('subj_idx', 'condition', 'rt', 'correct')) # writes the headers
 			wr.writerows(export_data) # writes the data
-
-        		
 	else:
-		with open('/data/pdmattention/TestData.csv','a', encoding = 'ISO-8859_1', newline='') as csvFile:
+		with open('/data/pdmattention/TestData.csv','a') as csvFile:
 			wr = csv.writer(csvFile)
 			wr.writerows(export_data)
         		
@@ -174,7 +172,7 @@ for sub in range(len(all_subfiles)):
 
 
 	# zips lists together, making it easier to write to csv file
-	export_data = zip_longest(*data, fillvalue='') # zip_longest makes an iterator 
+	export_data = izip_longest(*data, fillvalue='') # zip_longest makes an iterator 
 		                                       # that aggregates elements from
 		                                       # each of the iterables; if uneven
 		                                       # missing values are filled-in
@@ -202,7 +200,7 @@ for sub in range(len(all_subfiles)):
 
 '''
 
-
+'''
 with open('/data/pdmattention/NaNIndices_ExcludeSub.csv', 'w') as f:
 	fieldnames = ['subj_id', 'indices']
 	writer = csv.DictWriter(f, fieldnames = fieldnames)
@@ -210,7 +208,6 @@ with open('/data/pdmattention/NaNIndices_ExcludeSub.csv', 'w') as f:
 	data = [dict(zip(fieldnames, [k,v])) for k, v in nantrial_dict_exsub.items()]
 	writer.writerows(data)
 
-'''
 with open('/data/pdmattention/NaNIndices_AllSub.csv', 'w') as f:
 	fieldnames = ['subj_id', 'indices']
 	writer = csv.DictWriter(f, fieldnames = fieldnames)

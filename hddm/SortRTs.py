@@ -7,18 +7,26 @@
 First sort RTs from short to long
 '''
 
-
 '''
 mar's notes:
+
 
 zip_longest -- sorts all maybe??
 '''
 
-class rt_sort:
+import math
+import numpy as np 
 
-	def __init__(self, rts):
-		self.rts = rts 
+L = 1.5 #limit
+l = 0.01 #lambda 
+s = .5 # standard deviation 
 
-	def sortRTData(self)
-		sorted(range(len(self.rts), key = lambda k:self.rts[k]))
-		return self.rts 
+def sortrt(rt_list):
+
+	srtd_indices = sorted(range(len(rt_list)), key=lambda k: rt_list[k])
+	rt_list.sort() 
+
+	cutoff = 0; 
+
+	ucl = .5+L*s*(math.sqrt(l/(2-l)*(1 - np.power((1-l), (2*(1:len(rt_list)))))))
+	return rt_list, srtd_indices
