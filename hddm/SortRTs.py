@@ -21,6 +21,7 @@ L = 1.5 #limit
 l = 0.01 #lambda 
 s = .5 # standard deviation 
 
+
 def sortrt(rt_list):
 
 	srtd_indices = sorted(range(len(rt_list)), key=lambda k: rt_list[k])
@@ -28,5 +29,11 @@ def sortrt(rt_list):
 
 	cutoff = 0; 
 
-	ucl = .5+L*s*(math.sqrt(l/(2-l)*(1 - np.power((1-l), (2*(1:len(rt_list)))))))
+	'''
+	solve numpy // matlab
+	experiment with what is translating
+
+	np.power((1-l), np.multiply(2, (len(range(1, rt_list)))))
+	'''
+
 	return rt_list, srtd_indices
