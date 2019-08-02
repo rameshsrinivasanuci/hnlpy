@@ -16,6 +16,9 @@ zip_longest -- sorts all maybe??
 
 import math
 import numpy as np 
+import scipy.linalg as sl 
+
+
 
 L = 1.5 #limit
 l = 0.01 #lambda 
@@ -32,8 +35,10 @@ def sortrt(rt_list):
 	'''
 	solve numpy // matlab
 	experiment with what is translating
-
-	np.power((1-l), np.multiply(2, (len(range(1, rt_list)))))
 	'''
+
+	ucl = .5+L*s*(sl.sqrtm(l/(2-l)*(np.power((1-l), np.multiply(2, (range(len(rt_list))))))))
+	lcl = .5-L*s*(sl.sqrtm(l/(2-l)*(np.power((1-l), np.multiply(2, (range(len(rt_list))))))))
+	
 
 	return rt_list, srtd_indices
