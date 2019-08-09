@@ -41,22 +41,20 @@ ucl = .5+L*s*(np.sqrt(l/(2-l)*(np.power((1-l), np.multiply(2, (range(len(cond_li
 lcl = .5-L*s*(np.sqrt(l/(2-l)*(np.power((1-l), np.multiply(2, (range(len(cond_list))))))))
 
 
-'''
-Error Checking Filter Function ~ Not Working
+#Error Checking Filter Function ~ Not Working
 x1 = np.array([l])
 x2 = np.array([1, (1-l)])
 x3 = np.array([(1-l)/2])
 
 print(type(x1), 'x1', type(x2), 'x2', type(x3), 'x3')
 
-z = lfilter(np.array([l]), np.array([1, (1-l)]), cond, zi= np.array([(1-l)/2]))
-'''
+#z = lfilter(np.array([l]), np.array([1, (1-l)]), rts, zi= np.array([(1-l)/2]))
 
 # variables defined for filtering
 
 b = np.array([l])
 a = np.array([1, (l-1)])
-x = cond
+x = rts
 zi = (1-l)/2
 
 z = []
