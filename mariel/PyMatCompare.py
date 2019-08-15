@@ -4,6 +4,7 @@
 import numpy as np 
 import h5py
 from scipy.signal import lfilter
+import matlab.engine
 
 L = 1.5
 l = 0.01
@@ -27,7 +28,7 @@ for ii in range(len(rts)):
 	cond_list.append(cond[ii][0])
 
 
-check1 = np.power((1-l), np.multiply(2,(range(len(cond_list)))))
+check1 = np.power((1-l), np.multiply(2,(range(len(rt_list)))))
 check4 = 1-check1
 check2 = l/((2-l))
 check3 = check4*check2
@@ -35,10 +36,10 @@ check5 = np.round(np.sqrt(check3), 4)
 
 
 ######
-X = cond_list
+X = rt_list
 
-ucl = .5+L*s*(np.sqrt(l/(2-l)*(np.power((1-l), np.multiply(2, (range(len(cond_list))))))))
-lcl = .5-L*s*(np.sqrt(l/(2-l)*(np.power((1-l), np.multiply(2, (range(len(cond_list))))))))
+ucl = .5+L*s*(np.sqrt(l/(2-l)*(np.power((1-l), np.multiply(2, (range(len(rt_list))))))))
+lcl = .5-L*s*(np.sqrt(l/(2-l)*(np.power((1-l), np.multiply(2, (range(len(rt_list))))))))
 
 
 #Error Checking Filter Function ~ Not Working
@@ -46,7 +47,6 @@ x1 = np.array([l])
 x2 = np.array([1, (1-l)])
 x3 = np.array([(1-l)/2])
 
-print(type(x1), 'x1', type(x2), 'x2', type(x3), 'x3')
 
 #z = lfilter(np.array([l]), np.array([1, (1-l)]), rts, zi= np.array([(1-l)/2]))
 
@@ -59,7 +59,7 @@ zi = (1-l)/2
 
 z = []
 for n in range(0, len(cond)):
-	print('n: ', n)
+	
 	if n == 0:
 		z_add = (b[0]) * x[n][0] - (a[1]) * zi
 		z_add = a[0]*z_add
@@ -70,3 +70,17 @@ for n in range(0, len(cond)):
 		
 
 	z.append(round(z_add, 4)) 
+
+
+z1 = np.array(z)
+
+ucl1 = []
+
+for ii in range(len(ucl)):
+	ucl1.append(ii)
+
+#vv = np.argwhere((np.diff(z<ucl1)== -1), 1, 'first')
+eng = matlab.engine.start_matlab()
+vv = eng.find(eng.diff(z<ucl1)==-1, 1, 'first')
+
+#if eng.isempty(vv) 
