@@ -83,4 +83,5 @@ for ii in range(len(ucl)):
 eng = matlab.engine.start_matlab()
 vv = eng.find(eng.diff(z<ucl1)==-1, 1, 'first')
 
-#if eng.isempty(vv) 
+if eng.isempty(vv) != True:
+	cutoff = T 
