@@ -17,7 +17,12 @@ import LoadMat as LM
 import EWMAV_PY as EM
 
 goal_dir = '/data/pdmattention/task3/'
+
 data = LM.load_data(goal_dir)
 data1 = EM.EWMAV(data)
 
+# CSV function 
+# complete = create_CSV(data1)
 
+# if complete == True:
+# 	print('EWMAV Rt Sorting Complete')
