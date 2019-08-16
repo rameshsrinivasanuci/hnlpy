@@ -9,6 +9,7 @@ import h5py
 from scipy.signal import lfilter
 import matlab.engine as ME
 import math
+import matplotlib.pyplot as plt
 
 eng = ME.start_matlab()
 
@@ -69,8 +70,8 @@ if error_check == True:
 correct_list = [correct_list[i] for i in index2]
 
 
-ucl = .5+L*s*(np.sqrt(l/(2-l)*(np.power((1-l), np.multiply(2, (range(len(rt_list))))))))
-lcl = .5-L*s*(np.sqrt(l/(2-l)*(np.power((1-l), np.multiply(2, (range(len(rt_list))))))))
+ucl = .5+L*s*(np.sqrt(l/(2-l)*(np.power((1-l), np.multiply(2, (range(len(cond_list))))))))
+lcl = .5-L*s*(np.sqrt(l/(2-l)*(np.power((1-l), np.multiply(2, (range(len(cond_list))))))))
 
 b = np.array([l])
 a = np.array([1, (l-1)])
@@ -104,8 +105,51 @@ eng = ME.start_matlab()
 vv = eng.find(eng.diff(z<ucl1)==-1, 1, 'first')
 eps = 2.2204e-16
 
+cutoff = 0
+
 if eng.isempty(vv) == False:
 	cutoff = rt_list[vv] + eps
 else:
 	vv = 1
 
+# figure out if var for YBlue and XBlue can be passed as python int list 
+# then use eng.plot(ii) to plot everything 
+
+BlueX = [cutoff]
+for ii in range(len(rt_list)):
+	if rt_list > cutoff:
+		BlueX.append(((rt_list[ii]).astype(int)).item())
+
+
+BlueY = [((ucl[vv]).astype(int)).item()]
+for ii in range(len(rt_list)):
+	if rt_list > cutoff:
+		BlueY.append(z[ii])
+
+
+RedX = []
+for ii in range(len(rt_list)):
+	if rt_list < cutoff:
+		RedX.append(((rt_list[ii]).astype(int)).item())
+
+RedX.append(cutoff)
+
+RedY = []
+for ii in range(len(rt_list)):
+	if rt_list < cutoff:
+		RedY.append(z[ii])
+	
+RedX.append(((ucl[vv]).astype(int)).item())
+
+
+check = len(BlueX) + len(RedX)
+
+if check < 500:
+	bf = 'b.'
+	rf = 'r.'
+else:
+	bf = 'b-'
+	rf = 'r-'
+
+plt.plot(BlueX, BlueY, bf)
+#matplotlib.pyplot.plot(RedX, RedY, rf)
