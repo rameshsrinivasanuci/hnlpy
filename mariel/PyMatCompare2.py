@@ -19,7 +19,7 @@ s = .5
 
 
 arrays = {}
-f = h5py.File('/data/pdmattention/task3/s205_ses1_task3_expinfo.mat')
+f = h5py.File('/data/pdmattention/task3/s197_ses1_task3_expinfo.mat')
 for k, v in f.items():
 		arrays[k] = np.array(v)
 
@@ -45,9 +45,9 @@ for ii in range(len(rts)):
 	check_nan = rts[ii][0]
 
 	if check_nan > 0: # checks for nan trials 
-		rt_list.append(rts[ii][0])
-		cond_list.append(cond[ii][0])
-		correct_list.append(correct[ii][0])
+		rt_list.append(rts[ii][0].item()/1000)
+		cond_list.append(cond[ii][0].item())
+		correct_list.append(correct[ii][0].item())
 	
 	elif check_nan <= 0:
 		index1.append(ii)
@@ -59,34 +59,42 @@ rt_list.sort()
 
 if error_check == True:
 	print('OG: ', cond_list)
-	print("OG: ", cond_list[119])
+	print("OG: ", cond_list[1])
 
 cond_list = [cond_list[i] for i in index2]
 
 if error_check == True:
 	print('New: ', cond_list)
-	print('New: ', cond_list[359])
+	print('New: ', cond_list[3])
 
 correct_list = [correct_list[i] for i in index2]
 
+check1 = np.power((1-l), np.multiply(2,(range(len(rt_list)))))
+check1 = np.round(check1,4)
+check4 = 1-check1
+check2 = np.round((l/(2-l)), 4)
+check3 = np.round(check4*check2,4)
+check5 = np.round(np.sqrt(check3), 4)
 
-ucl = .5+L*s*(np.sqrt(l/(2-l)*(np.power((1-l), np.multiply(2, (range(len(cond_list))))))))
-lcl = .5-L*s*(np.sqrt(l/(2-l)*(np.power((1-l), np.multiply(2, (range(len(cond_list))))))))
+ucl = .5+L*s*check5
+lcl = .5-L*s*check5
+#ucl = .5+L*s*(np.sqrt(l/(2-l)*(np.power((1-l), np.multiply(2, (range(len(cond_list))))))))
+#lcl = .5-L*s*(np.sqrt(l/(2-l)*(np.power((1-l), np.multiply(2, (range(len(cond_list))))))))
 
 b = np.array([l])
 a = np.array([1, (l-1)])
-x = rts
+x = np.array(rt_list)
 zi = (1-l)/2
 
 z = []
-for n in range(0, len(cond)):
+for n in range(len(x)):
 	
 	if n == 0:
-		z_add = (b[0]) * x[n][0] - (a[1]) * zi
+		z_add = (b[0]) * x[n]- (a[1]) * zi
 		z_add = a[0]*z_add
 		
 	else:
-		z_add = (b[0]) * x[n][0] - (a[1]) * z[n-1]
+		z_add = (b[0]) * x[n] - (a[1]) * z[n-1]
 		z_add = a[0]*z_add
 		
 
@@ -102,7 +110,18 @@ for ii in range(len(ucl)):
 
 #vv = np.argwhere((np.diff(z<ucl1)== -1), 1, 'first')
 eng = ME.start_matlab()
-vv = eng.find(eng.diff(z<ucl1)==-1, 1, 'first')
+
+# vvv have to break into two lines of code because np.diff returns bool instead of 1s and 0s vvv
+# vv = eng.find(np.diff(z1<ucl)==-1, 1, 'first')
+
+Diff = ((np.diff(z1<ucl) == -1).astype(int))
+
+if np.count_nonzero(Diff)==0:
+	vv = []
+else:
+	vv1 = np.where(Diff>0)
+	vv = vv1[0].item()
+
 eps = 2.2204e-16
 
 cutoff = 0
@@ -117,26 +136,26 @@ else:
 
 BlueX = [cutoff]
 for ii in range(len(rt_list)):
-	if rt_list > cutoff:
-		BlueX.append(((rt_list[ii]).astype(int)).item())
+	if rt_list[ii] > cutoff:
+		BlueX.append(rt_list[ii])
 
 
 BlueY = [((ucl[vv]).astype(int)).item()]
 for ii in range(len(rt_list)):
-	if rt_list > cutoff:
+	if rt_list[ii] > cutoff:
 		BlueY.append(z[ii])
 
 
 RedX = []
 for ii in range(len(rt_list)):
-	if rt_list < cutoff:
-		RedX.append(((rt_list[ii]).astype(int)).item())
+	if rt_list[ii] < cutoff:
+		RedX.append(rt_list[ii])
 
 RedX.append(cutoff)
 
 RedY = []
 for ii in range(len(rt_list)):
-	if rt_list < cutoff:
+	if rt_list[ii] < cutoff:
 		RedY.append(z[ii])
 	
 RedX.append(((ucl[vv]).astype(int)).item())
@@ -152,4 +171,5 @@ else:
 	rf = 'r-'
 
 plt.plot(BlueX, BlueY, bf)
-#matplotlib.pyplot.plot(RedX, RedY, rf)
+plt.plot(RedX, RedY, rf)
+plt.show(block = True)
