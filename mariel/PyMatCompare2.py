@@ -84,7 +84,7 @@ lcl = .5-L*s*check5
 b = np.array([l])
 a = np.array([1, (l-1)])
 x = np.array(rt_list)
-zi = (1-l)/2
+zi = np.array((1-l)/2)
 
 z = []
 for n in range(len(x)):
@@ -92,13 +92,11 @@ for n in range(len(x)):
 	if n == 0:
 		z_add = (b[0]) * x[n]- (a[1]) * zi
 		z_add = a[0]*z_add
-		
+		z.append(round(z_add, 4)) 
 	else:
 		z_add = (b[0]) * x[n] - (a[1]) * z[n-1]
 		z_add = a[0]*z_add
-		
-
-	z.append(round(z_add, 4)) 
+		z.append(round(z_add, 4)) 
 
 
 z1 = np.array(z)
@@ -158,7 +156,7 @@ for ii in range(len(rt_list)):
 	if rt_list[ii] < cutoff:
 		RedY.append(z[ii])
 	
-RedX.append(((ucl[vv]).astype(int)).item())
+RedY.append(((ucl[vv]).astype(int)).item())
 
 
 check = len(BlueX) + len(RedX)
@@ -172,4 +170,7 @@ else:
 
 plt.plot(BlueX, BlueY, bf)
 plt.plot(RedX, RedY, rf)
-plt.show(block = True)
+#plt.fill([rt_list, rt_list.reverse()], [ucl, lcl], 'r' )
+
+plt.xlim(0, 1.4)
+plt.show(block=True)
