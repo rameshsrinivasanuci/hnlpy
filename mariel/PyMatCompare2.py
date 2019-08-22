@@ -19,7 +19,7 @@ s = .5
 
 
 arrays = {}
-f = h5py.File('/data/pdmattention/task3/s197_ses1_task3_expinfo.mat')
+f = h5py.File('/data/pdmattention/task3/s239_ses1_task3_expinfo.mat')
 for k, v in f.items():
 		arrays[k] = np.array(v)
 
@@ -83,7 +83,7 @@ lcl = .5-L*s*check5
 
 b = np.array([l])
 a = np.array([1, (l-1)])
-x = np.array(rt_list)
+x = np.array(correct_list)
 zi = np.array((1-l)/2)
 
 z = []
@@ -122,6 +122,7 @@ else:
 
 eps = 2.2204e-16
 
+
 cutoff = 0
 
 if eng.isempty(vv) == False:
@@ -131,7 +132,7 @@ else:
 
 # figure out if var for YBlue and XBlue can be passed as python int list 
 # then use eng.plot(ii) to plot everything 
-
+'''
 BlueX = [cutoff]
 for ii in range(len(rt_list)):
 	if rt_list[ii] > cutoff:
@@ -158,7 +159,27 @@ for ii in range(len(rt_list)):
 	
 RedY.append(((ucl[vv]).astype(int)).item())
 
+'''
+'''
+BlueX = [cutoff]
+RedX = []
+for ii in range(len(rt_list)):
+	if rt_list[ii] > cutoff:
+		BlueX.append(rt_list[ii])
+	elif rt_list[ii]<cutoff:
+		RedX.append(rt_list[ii])
 
+
+BlueY = [((ucl[vv]).astype(int)).item()]
+RedY = []
+for ii in range(len(rt_list)):
+	if rt_list[ii] > cutoff:
+		BlueY.append(z[ii])
+	elif rt_list[ii]<cutoff:
+		RedY.append(z[ii])
+'''
+
+'''
 check = len(BlueX) + len(RedX)
 
 if check < 500:
@@ -167,10 +188,29 @@ if check < 500:
 else:
 	bf = 'b-'
 	rf = 'r-'
+'''
+rt_1 = []
+rt_2 = []
+z_1 = []
+z_2 = []
+for ii in range(len(rt_list)):
+	if z[ii]/rt_list[ii] > ucl[ii]/ii:
+		rt_1.append(rt_list[ii])
+		z_1.append(z[ii])
+	else:
+		rt_2.append(rt_list[ii])
+		z_2.append(z[ii])
 
-plt.plot(BlueX, BlueY, bf)
-plt.plot(RedX, RedY, rf)
+
+plt.plot(rt_1, z_1, 'b.')
+plt.plot(rt_2, z_2, 'r.')
+plt.plot(ucl)
+
+
+#plt.plot(BlueX, BlueY, bf)
+#plt.plot(RedX, RedY, rf)
 #plt.fill([rt_list, rt_list.reverse()], [ucl, lcl], 'r' )
+
 
 plt.xlim(0, 1.4)
 plt.show(block=True)
