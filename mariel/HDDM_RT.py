@@ -21,7 +21,7 @@ import h5py
 import numpy as np
 import csv
 import math
-#from itertools import izip_longest 
+from itertools import zip_longest 
 from scipy.signal import lfilter
 import matlab.engine as ME
 import matplotlib.pyplot as plt
@@ -74,7 +74,6 @@ def get_data(current_sub):
 
 	return rts, conditions, corrects
 
-'''
 def make_CSV(data, indices, current_sub, index):
 
 	sub = current_sub[0:4]
@@ -83,15 +82,17 @@ def make_CSV(data, indices, current_sub, index):
 		sub_list.append(sub)
 
 	data.insert(0, sub_list)
+	data1 = [sub, indices]
 
-	export_data = izip_longest(*data, fillvalue='') # zip_longest makes an iterator 
+	export_data = zip_longest(*data, fillvalue='') # zip_longest makes an iterator 
 		                                       # that aggregates elements from
 		                                       # each of the iterables; if uneven
 		                                       # missing values are filled-in
 		                                       # with fillvalue
 
+
 	if index == 0:
-		with open('/data/pdmattention/TestData.csv', 'w') as csvFile:
+		with open('TestData.csv', 'w') as csvFile:
 			wr = csv.writer(csvFile) # returns a writer object responsible for
 							 # converting
 			                 # the user's data into strings; we can use this
@@ -99,11 +100,22 @@ def make_CSV(data, indices, current_sub, index):
 
 			wr.writerow(('subj_idx', 'condition', 'rt', 'correct')) # writes the headers
 			wr.writerows(export_data) # writes the data
+
+		with open('HDDM_Indices.csv', 'w') as csvFile:
+			wr = csv.writer(csvFile)
+			wr.writerow(('subj_idx', 'indices'))
+			wr.writerow(data1)
+	
+
 	else:
-		with open('/data/pdmattention/TestData.csv','a') as csvFile:
+		with open('TestData.csv','a') as csvFile:
 			wr = csv.writer(csvFile)
 			wr.writerows(export_data)
-'''
+
+		with open('HDDM_Indices.csv', 'a') as csvFile:
+			wr = csv.writer(csvFile)
+			wr.writerow(data1)
+	
 
 def EWMAV(rts, cond, correct):
 	# indices 
@@ -196,44 +208,54 @@ def EWMAV(rts, cond, correct):
 	else:
 		vv = 1
 
-	
 	rt_1 = []
 	rt_2 = []
 	z_1 = []
 	z_2 = []
 
-	below_cutoff = []
+	slope1_list = []
+	slope2_list = []
 	for ii in range(len(rt_list)):
-		if z[ii]/rt_list[ii] > ucl[ii]/ii:
+		if z1[ii] > ucl[ii]:
 			rt_1.append(rt_list[ii])
 			z_1.append(z[ii])
 		else:
 			rt_2.append(rt_list[ii])
 			z_2.append(z[ii])
-			below_cutoff.append(ii)
 
+	percentile = np.percentile(rt_list,5).item()
+
+	rt_list2 = []
+	for ii in rt_list:
+		rt_list2.append(round(ii, 2))
+
+
+	xx = rt_list2.index(round(percentile, 2))
 
 	plt.plot(rt_1, z_1, 'b.')
 	plt.plot(rt_2, z_2, 'r.')
-	plt.plot(ucl)
+	plt.plot(rt_list, ucl, 'm:')
+	plt.plot(rt_list2[xx], z[xx], 'yv')
+	print('percentile: ', np.percentile(rt_list, 5))
 
-	plt.xlim(0, 1.4)
+
+	plt.xlim(rt_1[0]-.1, 1.4)
 	plt.show(block=True)
 
 	sub_list = []
 
-	indices = [index0, index1, index2, below_cutoff]
+	
 	data = [cond_list, rt_list, correct_list]
 
-	return data, indices
+	return data, index2
 
 
 
 all_subfiles, sub_IDs, sub_files, sub_IDs = get_files(goal_dir)
 
-for xx in range(len(all_subfiles)):
-	current_sub = all_subfiles[xx]
+for xx in range(len(sub_files)):
+	current_sub = sub_files[xx]
 	rts, conditions, corrects = get_data(current_sub)
-	data, indices = EWMAV(rts, conditions, corrects)
-	#make_CSV(data, indices, current_sub, xx)
+	data, index2 = EWMAV(rts, conditions, corrects)
+	make_CSV(data, index2, current_sub, xx)
 
