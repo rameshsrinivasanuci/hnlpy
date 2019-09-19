@@ -34,8 +34,9 @@ s = .5
 
 
 def get_files(goal_dir):
-	data_files = os.listdir(goal_dir)
+	data_files = os.listdir(goal_dir) # gets all files in current directory 
 
+	# list of files
 	sub_files = []
 	sub_IDs = []
 
@@ -50,7 +51,7 @@ def get_files(goal_dir):
 
 			check = current[0:4]
 			if ( check != 's184' and check != 's187' and check != 's190' and check != 's193' and check != 's199' and check != 's209' and \
-				check != 's214' and check != 's220' and check != 's225' and check != 's228' and check != 's234' and check != 's240' and check != 's213'):		
+				check != 's214' and check != 's220' and check != 's225' and check != 's228' and check != 's234' and check != 's240' and check != 's213' and check != 's235'):		
 
 							sub_files.append(current)
 							sub_IDs.append(current[0:4])
@@ -59,6 +60,7 @@ def get_files(goal_dir):
 
 
 def get_data(current_sub):
+	# function loads each subject's file
 	arrays = {}
 
 	f = h5py.File(goal_dir + current_sub)
@@ -67,6 +69,7 @@ def get_data(current_sub):
 
 	f.close()
 
+	# indexes into np.array to get rt, condition, and correct data
 	rts = (arrays['rt']).astype(int)
 	conditions = (arrays['condition']).astype(int)
 	corrects = arrays['correct']
@@ -76,6 +79,10 @@ def get_data(current_sub):
 
 def make_CSV(data, indices, current_sub, index):
 
+	if debug == True:
+		print('CWD: ', os.getcwd())
+
+	# gets current subject index and makes a list of current subject's ID
 	sub = current_sub[0:4]
 	sub_list = []
 	for xx in range(len(data[0])):
@@ -91,8 +98,10 @@ def make_CSV(data, indices, current_sub, index):
 		                                       # with fillvalue
 
 
+
+	# creates CSV files
 	if index == 0:
-		with open('TestData.csv', 'w') as csvFile:
+		with open('/data/pdmattention/TrainingData_task3.csv', 'w') as csvFile:
 			wr = csv.writer(csvFile) # returns a writer object responsible for
 							 # converting
 			                 # the user's data into strings; we can use this
@@ -101,37 +110,45 @@ def make_CSV(data, indices, current_sub, index):
 			wr.writerow(('subj_idx', 'condition', 'rt', 'correct')) # writes the headers
 			wr.writerows(export_data) # writes the data
 
-		with open('HDDM_Indices.csv', 'w') as csvFile:
+		with open('/data/pdmattention/HDDM_Indices_task3.csv', 'w') as csvFile:
 			wr = csv.writer(csvFile)
 			wr.writerow(('subj_idx', 'indices'))
 			wr.writerow(data1)
 	
 
 	else:
-		with open('TestData.csv','a') as csvFile:
+		with open('/data/pdmattention/TrainingData_task3.csv','a') as csvFile:
 			wr = csv.writer(csvFile)
 			wr.writerows(export_data)
 
-		with open('HDDM_Indices.csv', 'a') as csvFile:
+		with open('/data/pdmattention/HDDM_Indices_task3.csv', 'a') as csvFile:
 			wr = csv.writer(csvFile)
 			wr.writerow(data1)
 	
 
-def EWMAV(rts, cond, correct):
-	# indices 
-	index0 = [range(360)]
-	index1 = []
+def EWMAV(rts, cond, correct, current_sub):
+	# EWMAV function sorts RTs from fastest to slowest and gets rid of RTs that are below a particular threshold 
+	# the threshold is determined based on an algorithm created by Joachim Vanderchove 
 
-	# lists 
+	# indices 
+	index0 = [range(360)] # original indices
+	index1 = [] # indices of nan trials
+
+	# lists for each data set
+	# these lists are used to index out values in np.array 
+	# because they are easier to manipulate
 	rt_list = []
 	cond_list = []
 	correct_list = []
 
+
+	#for loop which iterates through rt data and gets rid of data in 
+	# nan trials for all data sets
 	for ii in range(len(rts)):
 
-		check_nan = rts[ii][0]
+		check_nan = rts[ii][0] #indexes value
 
-		if check_nan > 0: # checks for nan trials 
+		if check_nan > 0: # checks for nan trials; if greater than 0 append to valid data list
 			rt_list.append(rts[ii][0].item()/1000)
 			cond_list.append(cond[ii][0].item())
 			correct_list.append(correct[ii][0].item())
@@ -140,15 +157,14 @@ def EWMAV(rts, cond, correct):
 			index1.append(ii)
 
 
-	# indices of sorted rt_list
-	index2 = np.argsort(rt_list) 
+	index2 = np.argsort(rt_list)# indices of sorted rt_list
 	rt_list.sort()
 
 	# sorts condition & correct with new rt indices arrangement 
 	cond_list = [cond_list[i] for i in index2]
 	correct_list = [correct_list[i] for i in index2]
 
-	# computation
+	# computation based on Joachim's code
 	check1 = np.power((1-l), np.multiply(2,(range(len(rt_list)))))
 	check1 = np.round(check1,4)
 	check4 = 1-check1
@@ -185,11 +201,8 @@ def EWMAV(rts, cond, correct):
 	for ii in range(len(ucl)):
 		ucl1.append(ii)
 
-	#vv = np.argwhere((np.diff(z<ucl1)== -1), 1, 'first')
 	eng = ME.start_matlab()
 
-	# vvv have to break into two lines of code because np.diff returns bool instead of 1s and 0s vvv
-	# vv = eng.find(np.diff(z1<ucl)==-1, 1, 'first')
 
 	Diff = ((np.diff(z1<ucl) == -1).astype(int))
 
@@ -236,14 +249,19 @@ def EWMAV(rts, cond, correct):
 	plt.plot(rt_2, z_2, 'r.')
 	plt.plot(rt_list, ucl, 'm:')
 	plt.plot(rt_list2[xx], z[xx], 'yv')
-	print('percentile: ', np.percentile(rt_list, 5))
 
+	if debug == True:
+		print('percentile: ', np.percentile(rt_list, 5))
 
 	plt.xlim(rt_1[0]-.1, 1.4)
-	plt.show(block=True)
+	plt.savefig('/data/pdmattention/EWMAV_task3/'+current_sub[0:5]+'EWMAVfig.png')
 
-	sub_list = []
 
+	if debug == True:
+		plt.show(block=True)
+		
+
+	plt.close()
 	
 	data = [cond_list, rt_list, correct_list]
 
@@ -256,6 +274,6 @@ all_subfiles, sub_IDs, sub_files, sub_IDs = get_files(goal_dir)
 for xx in range(len(sub_files)):
 	current_sub = sub_files[xx]
 	rts, conditions, corrects = get_data(current_sub)
-	data, index2 = EWMAV(rts, conditions, corrects)
+	data, index2 = EWMAV(rts, conditions, corrects, current_sub)
 	make_CSV(data, index2, current_sub, xx)
 
