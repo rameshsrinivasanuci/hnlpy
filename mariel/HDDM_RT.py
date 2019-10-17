@@ -107,7 +107,7 @@ def make_CSV(data, indices, current_sub, index):
 			                 # the user's data into strings; we can use this
 			                 # object to manipulate excel files
 
-			wr.writerow(('subj_idx', 'condition', 'rt', 'correct')) # writes the headers
+			wr.writerow(('subj_idx', 'stim', 'rt', 'response')) # writes the headers
 			wr.writerows(export_data) # writes the data
 
 		with open('/data/pdmattention/HDDM_Indices_task3.csv', 'w') as csvFile:
