@@ -77,11 +77,15 @@ def get_data(current_sub):
 
 	return rts, conditions, corrects
 
-def make_CSV(data, indices, current_sub, index):
+def make_CSV(data, indices, current_sub, index, y):
 
 	if debug == True:
 		print('CWD: ', os.getcwd())
 
+	if y == 1:
+		filename = '/data/pdmattention/TrainingData_task3.csv'
+	else:
+		filename = '/data/pdmattention/TrainingData_task3_allsubs.csv'
 	# gets current subject index and makes a list of current subject's ID
 	sub = current_sub[0:4]
 	sub_list = []
@@ -101,7 +105,7 @@ def make_CSV(data, indices, current_sub, index):
 
 	# creates CSV files
 	if index == 0:
-		with open('/data/pdmattention/TrainingData_task3.csv', 'w') as csvFile:
+		with open(filename, 'w') as csvFile:
 			wr = csv.writer(csvFile) # returns a writer object responsible for
 							 # converting
 			                 # the user's data into strings; we can use this
@@ -110,18 +114,18 @@ def make_CSV(data, indices, current_sub, index):
 			wr.writerow(('subj_idx', 'stim', 'rt', 'response')) # writes the headers
 			wr.writerows(export_data) # writes the data
 
-		with open('/data/pdmattention/HDDM_Indices_task3.csv', 'w') as csvFile:
+		with open(filename, 'w') as csvFile:
 			wr = csv.writer(csvFile)
 			wr.writerow(('subj_idx', 'indices'))
 			wr.writerow(data1)
 	
 
 	else:
-		with open('/data/pdmattention/TrainingData_task3.csv','a') as csvFile:
+		with open(filename,'a') as csvFile:
 			wr = csv.writer(csvFile)
 			wr.writerows(export_data)
 
-		with open('/data/pdmattention/HDDM_Indices_task3.csv', 'a') as csvFile:
+		with open(filename, 'a') as csvFile:
 			wr = csv.writer(csvFile)
 			wr.writerow(data1)
 	
@@ -271,9 +275,17 @@ def EWMAV(rts, cond, correct, current_sub):
 
 all_subfiles, sub_IDs, sub_files, sub_IDs = get_files(goal_dir)
 
+y1 = 1
+y2 = 2
+
 for xx in range(len(sub_files)):
 	current_sub = sub_files[xx]
 	rts, conditions, corrects = get_data(current_sub)
 	data, index2 = EWMAV(rts, conditions, corrects, current_sub)
-	make_CSV(data, index2, current_sub, xx)
+	make_CSV(data, index2, current_sub, xx, y1)
 
+for xx in range(len(all_subfiles)):
+	current_sub = all_subfiles[xx]
+	rts, conditions, corrects = get_data(current_sub)
+	data, index2 = EWMAV(rts, conditions, corrects, current_sub)
+	make_CSV(data, index2, current_sub, xx, y2)
