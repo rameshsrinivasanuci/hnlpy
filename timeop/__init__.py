@@ -1,2 +1,4 @@
 from .makefilter import makefilter
-__all__ = ['makefilter']
+from .makefilter import makefiltersos
+from .makefilter import bodeplot
+__all__ = ['makefilter','makefiltersos','bodeplot']
