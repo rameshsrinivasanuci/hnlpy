@@ -8,13 +8,13 @@ import timeop
 from sklearn import decomposition
 
 #import data 
-datadict = read_mat('/home/ramesh/pdmattention/task3/s206_ses1_task3_final.mat')
+datadict = read_mat('/home/ramesh/pdmattention/task3/s206_ses1_task3_ica.mat')
 #This bit was for importing ica files.  we should just calculate internally
 #ica = numpy.array(datadict['ica'])
 #mix = numpy.array(datadict['mix'])
 #sep = numpy.array(datadict['sep'])
 #organize data
-data = numpy.array(datadict['data'])
+data = numpy.array(datadict['ica'])
 artifact = numpy.array(datadict['artifact'])
 sr = numpy.array(datadict['sr'])
 # open up indices
