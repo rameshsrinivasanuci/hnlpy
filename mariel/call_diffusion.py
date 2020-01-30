@@ -1,6 +1,8 @@
 # imports
 import diffusion
 
+debugging = True
+
 ### globals ###
 
 #global variable for different task
@@ -16,13 +18,13 @@ def main():
 
 	# reconstructs base directory path based on whether we are looking for the data directory
 	# and the task we are analyzig
-	path = get_paths(basedir, taskNum)
+	path = diffusion.get_paths(basedir, taskNum)
 		# path_type represents the base path we are looking for; where we store analyzed data or 
 		# retrieve raw data
 	
 	# returns a list of subject IDs based on wheter or not this is testing analysis
 	# or analysis of all subjects
-	subIDs= choose_subs(lvlAnalysis, path)
+	subIDs= diffusion.choose_subs(lvlAnalysis, path)
 	preprocessing_main(subIDs, path)
 
 
@@ -31,14 +33,30 @@ def main():
 def preprocessing_main(subIDs, path):
 	for xx in range(len(subIDs)):
 		currentSub = subIDs[xx]
-		BehPath, EEGPath = path_reconstruct(currentSub, path, taskNum)
-		BehInd, EEGInd = readFiles(beh_file, eeg_file)
-		OverlapInd = find_overlapIndices(BehInd, EEGInd)
-		sub_data = extract_data(OverlapInd, xx)
-		writeCSV(currentSub, sub_data)
+		BehPath, EEGPath = diffusion.path_reconstruct(currentSub, path, taskNum)
+		BehInd, EEGInd = diffusion.readFiles(BehPath, EEGPath)
+		OverlapInd = diffusion.find_overlapIndices(BehInd, EEGInd)
+		sub_data = diffusion.extract_data(OverlapInd, currentSub, path, taskNum)
+		diffusion.writeCSV(currentSub, sub_data)
 
+
+def debug():
+	debug_path = '/data/pdmattention/task3/'
+	currentSub = 's195_ses2_' 
+	BehPath, EEGPath = diffusion.path_reconstuct(currentSub, debug_path, taskNum)
+	BehInd, EEGInd = diffusion.ReadFiles(BehPath, EEGPath, taskNum, currentSub)
+	OverlapInd = diffusion.find_overlapIndices(BehInd, EEGInd)
+	sub_data = diffusion.extract_data(OverlapInd, currentSub, debug_path, taskNum)
+	
+	if debugging == True:
+		print(BehPath, EEGPath)
+		print("BehInd: ", BehInd)
+		print("EEGInd: ", EEGInd)
+		print(OverlapInd)
+
+	# for adding more colums to data, read in all data again with the additional column
 
 if __name__ == "__main__":
-	main()
+	debug()
 
 
