@@ -37,7 +37,7 @@ def preprocessing_main(subIDs, path):
 		BehInd, EEGInd = diffusion.readFiles(BehPath, EEGPath)
 		OverlapInd = diffusion.find_overlapIndices(BehInd, EEGInd)
 		sub_data = diffusion.extract_data(OverlapInd, currentSub, path, taskNum)
-		diffusion.writeCSV(currentSub, sub_data)
+		diffusion.writeCSV(sub_data, xx, taskNum, lvlAnalysis)
 
 
 def debug():
@@ -47,16 +47,19 @@ def debug():
 	BehInd, EEGInd = diffusion.ReadFiles(BehPath, EEGPath, taskNum, currentSub)
 	OverlapInd = diffusion.find_overlapIndices(BehInd, EEGInd)
 	sub_data = diffusion.extract_data(OverlapInd, currentSub, debug_path, taskNum)
+	diffusion.writeCSV(sub_data, 1, taskNum, lvlAnalysis)
 	
 	if debugging == True:
+		print(sub_data)
+		'''
 		print(BehPath, EEGPath)
 		print("BehInd: ", BehInd)
 		print("EEGInd: ", EEGInd)
 		print(OverlapInd)
-
+		'''
 	# for adding more colums to data, read in all data again with the additional column
-
+	return sub_data
 if __name__ == "__main__":
-	debug()
+	data = debug()
 
 

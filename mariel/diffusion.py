@@ -248,15 +248,67 @@ def extract_data(OverlapInd, currentSub, path, taskNum):
 	dataPath = path + currentSub[0:4] + '_behavior_final.mat'
 	dataDict = read_mat(dataPath)
 
-	# index out data
-	# make in a form list 
+	rt_list = []
+	correct_list = []
+	condition_list = []
+	eeg_list = []
+	sub_list = []
 
-	pass
+	rts = (dataDict['rt']).tolist()
+	corrects = (dataDict['correct']).tolist()
+	conditions = (dataDict['condition']).tolist()
+	eeg = (dataDict['trial']).tolist()
+
+	for index in OverlapInd:
+		rt_list.append(float(rts[index.astype(int)]))
+		correct_list.append(float(corrects[index.astype(int)]))
+		condition_list.append(int(conditions[index.astype(int)]))
+		eeg_list.append(eeg[index])
+		sub_list.append(currentSub[0:4])
+
+	
+	data = [sub_list, condition_list, rt_list, correct_list, eeg_list]
+	if debugging == True:
+		print(type(eeg_list))
+	
+	return data
 
 
-def writeCSV():
+def writeCSV(sub_data, iteration, taskNum, lvlAnalysis):
 	# puts all the indices in a csv file
-	pass
+	if lvlAnalysis == 1:
+		lvlAnalysis = 'testing'
+	else:
+		lvlAnalysis = 'allSubs'
+
+	path_type = 'store_data'
+	StorePath = get_paths(path_type, taskNum)
+	filename = StorePath + 'TrainingData_task' + str(taskNum) + lvlAnalysis
+
+	if iteration == 0:
+		with open(filename, 'w') as csvFile:
+			wr = csv.writer(csvFile) # returns a writer object responsible for
+							 # converting
+			                 # the user's data into strings; we can use this
+			                 # object to manipulate excel files
+
+			wr.writerow(('subj_idx', 'stim', 'rt', 'response', 'artifact')) # writes the headers
+			wr.writerows(sub_data) # writes the data
+
+	else:
+		with open(filename,'a') as csvFile:
+			wr = csv.writer(csvFile)
+			wr.writerows(data)
 
 
-def writeCSVColumns():
+
+def writeCSVColumns(data, filenmae, newfilename):
+	with open (filename, 'r') as readobj, open(newfilename, 'w', newline='') as wrtieobj:
+		csv_reader = reader(read_obj)
+		csv_writer = writer(write_obj)
+
+		index = 0
+		for row in csv_reader:
+			reow.append(data[index])
+			csv_writer.writerows(row)
+			index = index + 1 
