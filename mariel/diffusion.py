@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from pymatreader import read_mat
 from scipy import signal
 
-debugging = True
+debugging = False
 showPlot = False
 
 #global variables
@@ -43,13 +43,19 @@ def choose_subs(lvlAnalysis, path):
 	allDataFiles = os.listdir(path)
 
 	if lvlAnalysis == 1:
+		print(lvlAnalysis)
 		excludeSubs = ['s184', 's187', 's190', 's193', 's199', 's209', 's214', 's220', 's225', 's228', \
 		's234', 's240', 's213', 's235']
 
 		subIDs = [] 
+		if debugging == True:
+			print(allDataFiles[0][13:])
+			print('Hey Chief', allDataFiles[0][25:29])
+			print(allDataFiles[0][0:4])
+			print(os.listdir(path))
 
 		for files in allDataFiles:
-			if (files[16:] == 'expinfo.mat') and files[0:4] not in excludeSubs == True:
+			if (files[16:] == 'expinfo.mat') and ((files[:4] not in excludeSubs) == True):
 				subIDs.append(files[0:10])
 
 	elif lvlAnalysis == 2:
@@ -61,7 +67,7 @@ def choose_subs(lvlAnalysis, path):
 
 	
 
-def path_reconstuct(currentSub, path, taskNum):
+def path_reconstruct(currentSub, path, taskNum):
 	# reconstructs data paths for subject 
 	# /data/pdmattention/task#/s###_ses#_task#_final.mat
 	# /data/pdmattention/task#/s###_ses#_task#_expinfo.mat
@@ -260,9 +266,9 @@ def extract_data(OverlapInd, currentSub, path, taskNum):
 	eeg = (dataDict['trial']).tolist()
 
 	for index in OverlapInd:
-		rt_list.append(float(rts[index.astype(int)]))
-		correct_list.append(float(corrects[index.astype(int)]))
-		condition_list.append(int(conditions[index.astype(int)]))
+		rt_list.append(float(rts[index]))
+		correct_list.append(float(corrects[index]))
+		condition_list.append(int(conditions[index]))
 		eeg_list.append(eeg[index])
 		sub_list.append(currentSub[0:4])
 
@@ -283,7 +289,8 @@ def writeCSV(sub_data, iteration, taskNum, lvlAnalysis):
 
 	path_type = 'store_data'
 	StorePath = get_paths(path_type, taskNum)
-	filename = StorePath + 'TrainingData_task' + str(taskNum) + lvlAnalysis
+	filename = StorePath + 'TrainingData_task' + str(taskNum) + lvlAnalysis + '.csv'
+	data_len = len(sub_data)
 
 	if iteration == 0:
 		with open(filename, 'w') as csvFile:
@@ -293,12 +300,20 @@ def writeCSV(sub_data, iteration, taskNum, lvlAnalysis):
 			                 # object to manipulate excel files
 
 			wr.writerow(('subj_idx', 'stim', 'rt', 'response', 'artifact')) # writes the headers
-			wr.writerows(sub_data) # writes the data
+			for index in range(len(sub_data[0])):
+				writedata = []
+				for item in range(len(sub_data)):
+					writedata.append(sub_data[item][index])
+				wr.writerow(writedata) # writes the data
 
 	else:
 		with open(filename,'a') as csvFile:
 			wr = csv.writer(csvFile)
-			wr.writerows(data)
+			for index in range(len(sub_data[0])):
+				writedata = []
+				for item in range(len(sub_data)):
+					writedata.append(sub_data[item][index])
+				wr.writerow(writedata) # writes the data
 
 
 
