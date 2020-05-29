@@ -1,0 +1,9 @@
+githubcommand.txt
+
+git clone
+git status
+git commit -a -m #commit needs arguments
+git config --list
+git log -2 # see the  previous commands
+
+:q to get out of vim
