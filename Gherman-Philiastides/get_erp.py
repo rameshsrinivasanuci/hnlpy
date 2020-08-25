@@ -107,6 +107,9 @@ def  get_erp(subID, run):
     erp_peakvalue = np.mean(erpfiltproject[indices])
     return erp, erpfiltproject
 
+def
+
+
 # to plot for individual subjects
 # plt.plot(np.arange(-200,500), erp[1800:2500, :])
 # plt.plot(np.arange(-200,500), erpfiltproject[1800:2500])

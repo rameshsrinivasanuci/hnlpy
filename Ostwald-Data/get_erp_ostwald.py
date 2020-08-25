@@ -11,8 +11,8 @@ import os
 import numpy.matlib
 from collections import Counter
 
-# subID = 'sub-003'
-# run = '02'
+subID = 'sub-003'
+run = '02'
 path = '/home/jenny/ostwald-data/clean-eeg-converted/'
 
 def main():
@@ -37,10 +37,10 @@ def get_allerp():
         if sub == 'sub-012':
              mean_erp = data = np.delete(mean_erp, 23, axis = 1)
 
-    # remove the mean when plotting
-        epochlength = mean_erp.shape[0]
-        erpmean = np.tile(np.mean(mean_erp, axis=0), [epochlength, 1])
-        mean_erp = mean_erp - erpmean
+    # #  remove the mean when plotting
+    #      epochlength = mean_erp.shape[0]
+    #      erpmean = np.tile(np.mean(mean_erp, axis=0), [epochlength, 1])
+    #      mean_erp = mean_erp - erpmean
 
 
 
@@ -98,11 +98,8 @@ def get_erp(subID, run):
 
     # remove EOG and ECG
     data = np.transpose(data)
-    data = np.delete(data, slice(30,32), axis = 1)
 
-    # # remove bad electrodes
-    # badelectrode =
-    # data = np.delete(data, slice(30), axis = 1)
+    data = np.delete(data, slice(30,32), axis = 1)
 
     #re-reference the data
     ref_mean = np.mean(data, axis = 1)
@@ -110,7 +107,7 @@ def get_erp(subID, run):
     data = data - ref_mean
 
     # construct a time x channel x trial matrix for each run for 6s
-    samples = int(5*sr)
+    samples = int(6*sr)
     channelnum = data.shape[1]
     trialnum = tstim.shape[0]
     trialdata = np.zeros((samples,channelnum, trialnum))
@@ -118,9 +115,9 @@ def get_erp(subID, run):
     # epoch the data to create single-trial segments for 5s
     for i in np.arange(trialnum):
         time = tstim[i]
-        trialdata[:,:, i] = data[time-1000: time+1500,:]
+        trialdata[:,:, i] = data[time-1000: time+2000,:]
 
-    # baseline selection for each trial 200s pre-stimulus
+    # baseline correction for each trial 200s pre-stimulus
     for i in range(0,trialnum):
         baseline_mean = np.mean(trialdata[(1000 - 100):1000,:, i], axis=0)
         baseline_mean = np.tile(np.mean(trialdata[(1000 - 100):1000,:, i], axis=0), [trialdata.shape[0]-900, 1])

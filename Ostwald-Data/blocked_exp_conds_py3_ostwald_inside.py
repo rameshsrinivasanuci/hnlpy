@@ -247,7 +247,7 @@ def summary(insamples):
 
 def jellyfish(possamps):  # jellyfish plots
     """Plots posterior distributions of given posterior samples in a jellyfish
-    plot. Jellyfish plots are posterior distributions (mirrored over their
+    plot. Jellyfish plots are posterior distributions (mirrored over theirch
     horizontal axes) with 99% and 95% credible intervals (currently plotted
     from the .5% and 99.5% & 2.5% and 97.5% percentiles respectively.
     Also plotted are the median and mean of the posterior distributions"
@@ -331,7 +331,7 @@ def jellyfish(possamps):  # jellyfish plots
 
 
 # Load and extract data
-filename = AllBehavFile()
+filename = beh_ostwald.AllBehavFile()
 indata =  sio.loadmat(filename)
 
 # indata = sio.loadmat('data/genparam_test1.mat') # Change this to your data location
@@ -541,6 +541,9 @@ print('The median posterior drift-rate (evidence units / sec) for participant 1 
 print('The median posterior non-decision time (sec) for participant 1 in condition 1 is %.2f with 95%% credible interval (%.2f , %.2f)' % (sumpos['ter']['median'][0,0], sumpos['ter']['95lower'][0,0], sumpos['ter']['95upper'][0,0]))
 print('The median posterior boundary (evidence units) for participant 1 in condition 1 is %.2f with 95%% credible interval (%.2f , %.2f)' % (sumpos['alpha']['median'][0,0], sumpos['alpha']['95lower'][0,0], sumpos['alpha']['95upper'][0,0]))
 
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #Posterior distributions
 plt.figure(figsize=(40,8))
 plt.suptitle('Posterior distributions of the drift-rate by condition' )
