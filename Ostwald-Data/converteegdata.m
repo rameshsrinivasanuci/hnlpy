@@ -6,8 +6,9 @@ function converteegdata(subID)
 % output paht '../derivatives/cleandata-eeg_inside-MRT/clean-eeg-converted'
 
 fprintf('%s\n\n', subID)
-basedir = '/home/jenny/ostwald-data/derivatives/cleandata-eeg_inside-MRT';
-subjectdir = fullfile(basedir, subID, 'eeg');
+% basedir = '/home/jenny/ostwald-data/derivatives/cleandata-eeg_inside-MRT';
+basedir = '/home/jenny/ostwald-data';
+subjectdir = fullfile(basedir, subID,'sourcedata-eeg_outside-MRT','eeg');
 cd(subjectdir)
 MyFileInfo = dir('*.vhdr*');
 FileName = vertcat(MyFileInfo.name);
@@ -19,17 +20,25 @@ else
     fprintf('%d runs detected for %s\n', NumFile, subID)
 end
 
-for i = 1:NumFile
-    outputdata = pop_loadbv(subjectdir, FileName(i,:));   
-    outputdir = fullfile(basedir,'clean-eeg-converted');
-    NewFileName = fullfile(outputdir, strcat(FileName(i,1:7),FileName(i,end-15:end-5),'.mat'));
-    jsonfname = fullfile(subjectdir, strcat(FileName(i, 1:end-5),'.json'));
-    if sum(jsonfname ~= strcat(subjectdir,'/sub-001_task-pdm_acq-insideMRT_run-02_eeg.json')) > 0
-       jsonfile = jsondecode(fileread(jsonfname));
-       save(NewFileName,'outputdata','jsonfile')
-    else
-       fprintf('this is an error file')
-       save(NewFileName,'outputdata')
-    end
-    fprintf('\n\n%s saved\n\n\n',NewFileName(end-21:end))
-end
+outputdata = pop_loadbv(subjectdir, FileName);  
+outputdir = fullfile(basedir,'clean-eeg-outside-converted');
+NewFileName = fullfile(outputdir, strcat(FileName(1:7),FileName(end-19:end-5),'.mat'));
+jsonfname = fullfile(subjectdir, strcat(FileName(1:end-5),'.json'));
+jsonfile = jsondecode(fileread(jsonfname));
+save(NewFileName,'outputdata','jsonfile');
+fprintf('\n\n%s saved\n\n\n',NewFileName(end-21:end))
+% 
+% for i = 1:NumFile
+%     outputdata = pop_loadbv(subjectdir, FileName(i,:));   
+%     outputdir = fullfile(basedir,'clean-eeg-converted');
+%     NewFileName = fullfile(outputdir, strcat(FileName(i,1:7),FileName(i,end-15:end-5),'.mat'));
+%     jsonfname = fullfile(subjectdir, strcat(FileName(i, 1:end-5),'.json'));
+%     if sum(jsonfname ~= strcat(subjectdir,'/sub-001_task-pdm_acq-insideMRT_run-02_eeg.json')) > 0
+%        jsonfile = jsondecode(fileread(jsonfname));
+%        save(NewFileName,'outputdata','jsonfile')
+%     else
+%        fprintf('this is an error file')
+%        save(NewFileName,'outputdata')
+%     end
+%     fprintf('\n\n%s saved\n\n\n',NewFileName(end-21:end))
+% end

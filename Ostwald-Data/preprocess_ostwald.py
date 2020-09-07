@@ -20,8 +20,101 @@ import numpy.matlib
 from collections import Counter
 import get_erp_ostwald
 import imagesc
+import get_erp_ostwald as geo
 
 path = '/home/jenny/ostwald-data/clean-eeg-converted/'
+
+
+def get_allerp():
+    subIDs, subIDs_run = geo.get_sub(path)
+    for sub in subIDs:
+        granddict = grandmean_ERP(sub)
+        artifact = granddict['artifact']
+        granderp = granddict['granderp']
+        goodchan = granddict['goodchan']
+        goodtrials = granddict['goodtrials']
+        badchan = granddict['badchan']
+        badtrials = granddict['badtrials']
+
+        imagesc.plot(artifact, cbar = False)
+        plt.title('%s' % sub)
+        plt.text(0.5, -10, 'excluded_channels for grand: %s' % len(badchan))
+        plt.text(0.5, -5, 'excluded_trials for grand: %s' % len(badtrials))
+
+        plt.figure()
+        plt.plot(np.arange(-100, 700, 2), granderp[950:1350, goodchan])
+        plt.title('%s' % sub)
+
+        plt.savefig('/home/jenny/ostwald-data/clean-eeg-converted/' + '/Figures/ERPs/cleanERP-sub%s.png' % sub[4:])
+
+
+def grandmean_ERP(subID):
+    run1 = get_epoch(subID,'01')
+    run2 = get_epoch(subID,'02')
+    run3 = get_epoch(subID,'03')
+    run4 = get_epoch(subID,'04')
+    if subID != 'sub-001':
+        run5 = get_epoch(subID,'05')
+
+    grand = []
+
+    grand = np.append(run1['trialeeg'],run2['trialeeg'],axis = 2)
+    grand = np.append(grand, run3['trialeeg'],axis = 2)
+    grand = np.append(grand, run4['trialeeg'],axis = 2)
+    if subID !='sub-001':
+        grand = np.append(grand, run5['trialeeg'],axis = 2)
+
+    condition = []
+
+    if subID != 'sub-001':
+        condition = list(np.array(run1['condition'])[:,1]) + list(np.array(run2['condition'])[:,1]) + \
+        list(np.array(run3['condition'])[:,1]) + list(np.array(run4['condition'])[:,1]) + \
+        list(np.array(run5['condition'])[:,1])
+
+    # construct a channel x trial matrix
+    channelnum = grand.shape[1]
+    trialnum = grand.shape[2]
+    artifact = np.zeros((channelnum, trialnum))
+
+    # for each channel in each trial, mark 1 if the abs(mV) is more than 100
+    for trial in range(0, trialnum):
+        for chan in range(0, channelnum):
+            waveform = grand[:, chan, trial]
+            if all(abs(i) <= 100 for i in waveform) is True:
+                artifact[chan, trial] = 0
+            else:
+                artifact[chan, trial] = 1
+
+    goodtrialsgrand, goodchangrand = get_indices(artifact)
+    excluded_trialsgrand = [i for i in range(0,trialnum) if i not in goodtrialsgrand]
+    excluded_channelsgrand = [i for i in range(0,channelnum) if i not in goodchangrand]
+    # imagesc.plot(artifact, cbar = False)
+    # plt.title('%s' % subID)
+    print('excluded_trials for grand: %s' % len(excluded_trialsgrand))
+    print('excluded_channels for grand: %s' % len(excluded_channelsgrand))
+
+
+    erpall = np.mean(grand[:, :, goodtrialsgrand], axis=2)
+
+    # make a lowpass filter
+    # sr = 500
+    # sos, w, h = timeop.makefiltersos(sr, 10, 20)
+    # erpfilt = signal.sosfiltfilt(sos, erpall, axis=0, padtype='odd')
+
+    # make a highpass filter
+    # sos, w, h = timeop.makefiltersos(sr, 1, 0.5)
+    # sos, w, h = timeop.makefiltersos(sr, 0.1, 0.05)
+    # sos,w,h = timeop.makefiltersos(sr,0.5,0.25)
+    # newfilt = signal.sosfiltfilt(sos, erpfilt, axis=0, padtype='odd')
+
+    # erpfiltbaseall = timeop.baselinecorrect(erpfilt, np.arange(948, 998, 1))
+
+
+    grandmean = dict()
+    grandmean = {'granderp': erpfiltbaseall, 'goodtrials': goodtrialsgrand, \
+              'goodchan': goodchangrand, 'badtrials': excluded_trialsgrand, \
+              'badchan':excluded_channelsgrand, 'condition': condition, 'artifact': artifact}
+    return grandmean
 
 
 def get_epoch(subID, run):
@@ -60,13 +153,13 @@ def get_epoch(subID, run):
     # get a matrix where the first column is the index, second column is the condition
     cond_ind = sorted(condList, key=lambda condList_entry: condList_entry[0])
 
-
     all_stim = left_hcp + left_hcnp + left_lcp + right_lcnp\
                + right_hcp + right_hcnp + right_lcp + right_lcnp
     all_stim.sort()
 
-    # index the latency
+    # index the latency, minus one because times series starts at 0 index
     tstim = latency[all_stim]
+    tstim = tstim -1
 
     # transpose the data
     data = np.transpose(data)
@@ -88,9 +181,9 @@ def get_epoch(subID, run):
     trialeeg = np.delete(trialdata, slice(30, 32), axis=1)
 
     # baseline correction
-    # get the mean of 200ms pre-stim and remove it from the whole window
+    # get the mean of 100ms pre-stim and remove it from the whole window
     for i in range(0, trialnum):
-        baseline_mean = np.tile(np.mean(trialeeg[(1000 - 150):1000, :, i], axis=0), [trialeeg.shape[0], 1])
+        baseline_mean = np.tile(np.mean(trialeeg[(1000 - 50):1000, :, i], axis=0), [trialeeg.shape[0], 1])
         trialeeg[:, :, i] = trialeeg[:, :, i] - baseline_mean
 
     # construct a channel x trial matrix
@@ -125,7 +218,8 @@ def get_epoch(subID, run):
         'bad_trials': excluded_trials,
         'bad_chan': excluded_channels,
         'cleandata': trialeeg,
-        'condition': cond_ind
+        'condition': cond_ind,
+        'tstim': tstim
         }
     filename = '/home/jenny/ostwald-data/clean-eeg-converted/' + subID + \
                '_run-' + run + '_info' + '.mat'

@@ -41,7 +41,8 @@ from pymatreader import read_mat
 from time import strftime
 ### import lab modules ###
 import timeop
-import diffusion 
+import diffusion
+import imagesc
 
 
 def flipstanout(insamples):
@@ -398,10 +399,10 @@ def mm2inch(*tupl):
     else:
         return tuple(i/mmperinch for i in tupl)
 
-
+#################################33333
 # get the first 4 runs for sub-006
 import preprocess_ostwald as po
-subID = 'sub-006'
+subID = 'sub-004'
 run1 = po.get_epoch(subID,'01')
 run2 = po.get_epoch(subID,'02')
 run3 = po.get_epoch(subID,'03')
@@ -443,56 +444,55 @@ condition = np.array(condition)
 
 
 
-
 #Bayesian PCA (see https://www.cs.helsinki.fi/u/sakaya/tutorial/)
 #This would reuce to regular PCA if Psi was isotropic, that is, proportional to the identity matrix (all the diagonal elements are equal)
 
 
-### Global Variables ###
-'''
-debug | for debugging code. Use if debug == True
-lvlAnalysis | lvlAnalysis indicates if we are running analysis on test data or all data
-            1 = test
-            2 = all
-path | path where data is
-'''
-debug = True
-lvlAnalysis = 2
-path = '/home/ramesh/pdmattention/task3/'
-subID = 'sub-016'
 
-currentSub = subID[0:4]
-print('Current Subject: ', currentSub)
-datadict = read_mat('/home/jenny/ostwald-data/clean-eeg-converted/sub-016_run-03_info.mat')
-behavdict = read_mat(path + subID[0:4] + '_behavior_final.mat')
-expdict = read_mat(path + subID + 'task3_expinfo.mat')
-d
-
-data = np.array(datadict['data'])
-
-artifact = np.array(datadict['artifact'])
-sr = np.array(datadict['sr'])
-beh_ind = np.array(behavdict['trials'])
-
-# open up indices
-artifact0 = artifact.sum(axis = 0)
-artifact1 = artifact.sum(axis = 1)
-
-identify good trials and good channels.
-goodtrials = np.squeeze(np.array(np.where(artifact0 < 20)))
-goodchan = np.squeeze(np.array(np.where(artifact1 < 40)))
-
-goodtrials = np.array(datadict['goodtrials'])
-goodchan = np.array(datadict['goodchan'])
-
-
-# BehEEG_int = list(set(beh_ind) & set(goodtrials))
-finalgoodtrials = np.array(diffusion.compLists(beh_ind, goodtrials))
-# finalgoodtrials = np.array(BehEEG_int)
-
-## separate by condition ###
-# separate finalgoodtrials by condition
-
+# ### Global Variables ###
+# '''
+# debug | for debugging code. Use if debug == True
+# lvlAnalysis | lvlAnalysis indicates if we are running analysis on test data or all data
+#             1 = test
+#             2 = all
+# path | path where data is
+# '''
+# debug = True
+# lvlAnalysis = 2
+# path = '/home/ramesh/pdmattention/task3/'
+# subID = 'sub-016'
+#
+# currentSub = subID[0:4]
+# print('Current Subject: ', currentSub)
+# datadict = read_mat('/home/jenny/ostwald-data/clean-eeg-converted/sub-016_run-03_info.mat')
+# behavdict = read_mat(path + subID[0:4] + '_behavior_final.mat')
+# expdict = read_mat(path + subID + 'task3_expinfo.mat')
+# d
+#
+# data = np.array(datadict['data'])
+#
+# artifact = np.array(datadict['artifact'])
+# sr = np.array(datadict['sr'])
+# beh_ind = np.array(behavdict['trials'])
+#
+# # open up indices
+# artifact0 = artifact.sum(axis = 0)
+# artifact1 = artifact.sum(axis = 1)
+#
+# identify good trials and good channels.
+# goodtrials = np.squeeze(np.array(np.where(artifact0 < 20)))
+# goodchan = np.squeeze(np.array(np.where(artifact1 < 40)))
+#
+# goodtrials = np.array(datadict['goodtrials'])
+# goodchan = np.array(datadict['goodchan'])
+#
+#
+# # BehEEG_int = list(set(beh_ind) & set(goodtrials))
+# finalgoodtrials = np.array(diffusion.compLists(beh_ind, goodtrials))
+# # finalgoodtrials = np.array(BehEEG_int)
+#
+# ## separate by condition ###
+# # separate finalgoodtrials by condition
 
 
 condition = np.take(condition, goodtrials)
@@ -518,11 +518,40 @@ finalgoodtrialList = [finalgoodtrials1, finalgoodtrials2, finalgoodtrials3, fina
 
 data = grand[:,:,:]
 
+# ###########################
+# inspect the erp for all conditions
+erpall = np.mean(data[:, :, goodtrials], axis=2)
+
+
+# make a lowpass filter
+sr = 500
+sos, w, h = timeop.makefiltersos(sr, 10, 20)
+erpfilt = signal.sosfiltfilt(sos, erpall, axis=0, padtype='odd')
+
+# sos, w, h = timeop.makefiltersos(sr, 1, 0.5)
+sos,w,h = timeop.makefiltersos(sr,0.1,0.05)
+# sos,w,h = timeop.makefiltersos(sr,0.5,0.25)
+newfilt = signal.sosfiltfilt(sos,erpfilt,axis = 0,padtype='odd')
+
+
+erpfiltbaseall = timeop.baselinecorrect(newfilt, np.arange(948, 998, 1))
+plt.plot(np.arange(-100, 700, 2), erpfiltbaseall[950:1350, goodchan])
+
+sos = []
+w = []
+h = []
+erpfilt = []
+newfilt = []
+
+
+
+
 allYinput = []
 fullwindowERPs = []
 for triallist in finalgoodtrialList:
     finalgoodtrial = triallist
     		#average erp.
+
     erp = np.mean(data[:, :, goodtrials], axis=2)
     # plt.plot(np.arange(-200, 1000, 2), erp)
     
@@ -530,14 +559,19 @@ for triallist in finalgoodtrialList:
     sr = 500
     sos,w,h = timeop.makefiltersos(sr,10,20)
     erpfilt = signal.sosfiltfilt(sos,erp,axis = 0,padtype='odd')
-    
-    erpfiltbase = timeop.baselinecorrect(erpfilt, np.arange(924,998,1))
-    #lets do a SVD, limiting the window in time, and taking the goodchannels. 
+
+    # sos, w, h = timeop.makefiltersos(sr, 1, 0.5)
+    # sos,w,h = timeop.makefiltersos(sr,0.1,0.05)
+    # sos,w,h = timeop.makefiltersos(sr,0.5,0.25)
+    # newfilt = signal.sosfiltfilt(sos,erpfilt,axis = 0,padtype='odd')
+
+    erpfiltbase = timeop.baselinecorrect(erpfilt, np.arange(948,998,1))
+    #lets do a SVD, limiting the window in time, and taking the goodchannels.
     
     # plt.plot(erpfiltbase)
     # plt.show()
 
-    Y = erpfiltbase[1075:1288, goodchan]
+    Y = erpfiltbase[1065:1265, goodchan]
     # Y = erpfiltbase[1075:1288,goodchan]
     allYinput.append(Y)
     fullwindowERPs.append(erpfiltbase[:,goodchan])
@@ -545,7 +579,7 @@ for triallist in finalgoodtrialList:
 Y1 = ( allYinput[0] - np.mean(allYinput[0].flatten()) ) / np.std(allYinput[0].flatten()) #Standardize
 Y2 = ( allYinput[1] - np.mean(allYinput[1].flatten()) ) / np.std(allYinput[1].flatten()) #Standardize
 Y3 = ( allYinput[2] - np.mean(allYinput[2].flatten()) ) / np.std(allYinput[2].flatten()) #Standardize
-Y4 = ( allYinput[3] - np.mean(allYinput[3].flatten()) ) / np.std(allYinput[2].flatten()) #Standardize
+Y4 = ( allYinput[3] - np.mean(allYinput[3].flatten()) ) / np.std(allYinput[3].flatten()) #Standardize
 
 N = Y1.shape[0] # Number of time points
 D = 4 #Number of components
@@ -667,6 +701,8 @@ sio.savemat(savedir + savestring, samples)
 print(vbfit)
 
 
+
+######################################################
 ## Plot Bayesian PCA components in the time domain
 # samples = sio.loadmat('model_fits/Bayesian_PCA_n200Aug_18_20_14_38.mat');
 samples = sio.loadmat(savedir + savestring);
@@ -675,34 +711,65 @@ fullwindowComp1 = np.matmul(fullwindowERPs[0],samples['comp1_weights'].T)
 fullwindowComp2 = np.matmul(fullwindowERPs[0],samples['comp2_weights'].T)
 fullwindowComp3 = np.matmul(fullwindowERPs[0],samples['comp3_weights'].T)
 fullwindowComp4 = np.matmul(fullwindowERPs[0],samples['comp4_weights'].T)
-window = np.arange(-300,700,2) # Time point 0 is the onset of the visual stimulus
+window = np.arange(-100,700,2) # Time point 0 is the onset of the visual stimulus
 
-fig, axs = plt.subplots(4, 1,figsize=mm2inch(244,110), sharex='col')
-y= np.zeros(len(window))
-axs[0].plot(window,fullwindowERPs[0][850:1350])
-line1 = axs[0].plot(np.arange(-300,700,2),y,'k')
+fig, axs = plt.subplots(3, 1,figsize=mm2inch(244,110), sharex='col')
+axs[0].plot(window,fullwindowERPs[0][950:1350])
+yline = np.arange(int(np.min(fullwindowERPs[0][950:1350])), int(np.max(fullwindowERPs[0][950:1350])))
+x = np.zeros(len(yline))
+axs[0].plot(x,yline,'k',linewidth=1)
 
-ax = line1[0].axes
-plt.xticks(list(plt.xticks()[0]))
-major_ticks = LineTicks(traj, range(0, n, 10), 10, lw=2,
-label=['{:.2f} s'.format(tt) for tt in t[::10]])
-
-
+xline = window
+y = np.zeros(len(window))
+axs[0].plot(xline,y,'k', linewidth=2)
+axs[0].set_ylabel('Amplitude (' + r'$\mu$'+'V)', fontsize=12)
 axs[0].tick_params(axis="x", direction="in")
-axs[0].axvline(0,color='black') # y = 0
+
+
+
+
 # axs[0].get_yaxis().set_visible(False)
-axs[1].plot(window,fullwindowComp1[850:1350])
+axs[1].plot(window,fullwindowComp1[950:1350])
+axs[1].plot(xline,y,'k',linewidth=1)
+yline = np.arange(int(np.min(fullwindowComp1[950:1350])), int(np.max(fullwindowComp1[950:1350])))
+x = np.zeros(len(yline))
+axs[1].plot(x,yline,'k-',linewidth=1)
+axs[1].set_ylabel('Amplitude (' + r'$\mu$'+'V)', fontsize=12)
+axs[1].tick_params(axis="x", direction="in")
+
 # axs[1].get_yaxis().set_visible(False)
-axs[2].plot(window,-fullwindowComp2[850:1350])
-# axs[2].get_yaxis().set_visible(False)
-axs[3].plot(window,-fullwindowComp3[850:1350])
+axs[2].plot(window,fullwindowComp2[950:1350])
+axs[2].plot(xline,y,'k',linewidth=1)
+yline = np.arange(int(np.min(fullwindowComp2[950:1350])), int(np.max(fullwindowComp2[950:1350])))
+x = np.zeros(len(yline))
+axs[2].plot(x,yline,'k',linewidth=1)
+axs[2].set_ylabel('Amplitude (' + r'$\mu$'+'V)', fontsize=12)
+axs[2].tick_params(axis="x", direction="in")
+
+#
+#
+# axs[3].plot(window,fullwindowComp3[950:1350])
+# axs[3].plot(xline,y,'k',linewidth=1)
+# yline = np.arange(int(np.min(fullwindowComp3[950:1350])), int(np.max(fullwindowComp3[950:1350])))
+# x = np.zeros(len(yline))
+# axs[3].plot(x,yline,'k',linewidth=1)
+# axs[3].set_ylabel('Amplitude (' + r'$\mu$'+'V)', fontsize=12)
+# axs[3].tick_params(axis="x", direction="in")
+#
 # axs[3].get_yaxis().set_visible(False)
-axs[3].set_xlabel('Time after stimulus onset (ms)', fontsize=14)
-axs[0].set_title('Original Component')
+axs[2].set_xlabel('Time after stimulus onset (ms)', fontsize=14)
+axs[2].set_ylabel('Amplitude (' + r'$\mu$'+'V)', fontsize=12)
+
+
+
 
 fig.set_size_inches(mm2inch(218,147),forward=False)
 # plt.savefig((f'model_fits/{subID}Bayesian_PCA_N200_timecourse.png'), dpi=300, format='png',bbox_inches='tight')
-plt.savefig(('/home/jenny/hnlpyjenny/Ostwald-Data/{subID}Bayesian_PCA_N200_time.png'), dpi=300, format='png',bbox_inches='tight')
+plt.savefig(('/home/jenny/hnlpyjenny/Ostwald-Data/grant/nofilt9.png'), dpi=300, format='png',bbox_inches='tight')
+plt.savefig(('/home/jenny/hnlpyjenny/Ostwald-Data/grant/nofilt9.eps'), dpi=300, format='eps',bbox_inches='tight')
+
+
+
 
 
 # la = fit.extract(permuted=False, pars=['L','psi','sigma_psi','mu_psi','sigma_lt','mu_lt'])  # return a dictionary of arrays that can be used by functions above

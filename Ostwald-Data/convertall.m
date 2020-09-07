@@ -1,7 +1,7 @@
 function convertall
 % This function runs through each subject under '../derivatives/cleandata-eeg_inside-MRT'
 
-basedir = '/home/jenny/ostwald-data/derivatives/cleandata-eeg_inside-MRT';
+basedir = '/home/jenny/ostwald-data/';
 subjectList =  dir(basedir);
 subjectList = {subjectList.name};
 ind = strfind(dirs,'sub');
