@@ -313,6 +313,9 @@ def get_ica(subID):
 
 
 
+def trialcomponents(subID):
+
+
 
 
 # plt.subplot(311)
