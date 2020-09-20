@@ -68,6 +68,10 @@ def revise_ICA(subID):
         time = alltstim[i]
         trialeeg[:, :, i] = eeg[time - 1000: time + 1500, :]
 
+    getline(np.mean(trialcomponent, axis=2))
+    A[:, 24] = 0
+
+
     # plot the raw erp
     cleaneeg = np.zeros((samples, channelnum, trialnum))
 
