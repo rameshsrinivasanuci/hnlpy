@@ -10,10 +10,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def getline(data):
+def getline(x, *y):
+    print(x,y)
     fig = plt.figure(figsize = (11,8))
     ax = fig.add_subplot(111)
-    line = plt.plot(data, picker=10)  # 5 points tolerance
+    line = plt.plot(x,y, picker=10)  # 5 points tolerance
     fig.canvas.mpl_connect('pick_event', onpick)
 
 def onpick(event):
