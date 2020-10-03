@@ -24,6 +24,7 @@ import get_erp_ostwald as geo
 from linepick import *
 
 base_dir = "/home/jenny/ostwald-data/"
+data_dir = "/home/jenny/ostwald-data/clean-eeg-converted/"
 path = '/home/jenny/ostwald-data/clean-eeg-converted/ICA/'
 
 def rerun_ICA():
