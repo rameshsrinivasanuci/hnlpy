@@ -170,8 +170,6 @@ def get_ica(subID, path, runica=False):
     data = data.astype(float)
 
     # seperate eeg and eog ecg
-    eog = data[:,30]
-    ecg = data[:,31]
     badchans = [30,31]
     eeg = np.delete(data, slice(30, 32), axis=1)
 
