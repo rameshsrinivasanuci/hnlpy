@@ -11,10 +11,10 @@ import matplotlib.pyplot as plt
 
 
 def getline(x, *y):
-    print(x,y)
+    print(x,*y)
     fig = plt.figure(figsize = (11,8))
     ax = fig.add_subplot(111)
-    line = plt.plot(x,y, picker=10)  # 5 points tolerance
+    line = plt.plot(x,*y, picker=10)  # 5 points tolerance
     fig.canvas.mpl_connect('pick_event', onpick)
 
 def onpick(event):
@@ -30,7 +30,3 @@ def onpick(event):
     # plt.gcf()
     # ax.text(0.05, 0.95, thisline, transform=ax.transAxes, fontsize=14,
     #         verticalalignment='top', bbox=props)
-
-
-
-
