@@ -21,7 +21,8 @@ from collections import Counter
 import imagesc
 import preprocess_ostwald as po
 import get_erp_ostwald as geo
-import linepick
+from linepick import *
+
 
 base_dir = "/home/jenny/ostwald-data/"
 data_dir = "/home/jenny/ostwald-data/clean-eeg-converted/"
@@ -63,11 +64,11 @@ def get_trialdata(subID):
     recover = A @ np.transpose(S)
 
     fig,ax = plt.subplots(3,1)
-    ax[0].plot(eeg[5000:9000,goodchans])
+    ax[0].plot(eeg[10000:14000,goodchans])
     ax[0].set_title("original signal")
-    ax[1].plot(S[5000:9000,:])
+    ax[1].plot(S[10000:14000,:])
     ax[1].set_title("source signal")
-    ax[2].plot(np.transpose(recover)[5000:9000,:])
+    ax[2].plot(np.transpose(recover)[10000:14000,:])
     ax[2].set_title("recover signal")
     fig.set_size_inches(11.56,8.91)
 
@@ -176,17 +177,17 @@ def generate_ICAplots(subID):
         baseline_mean2 = np.tile(np.mean(trialeeg[(1000 - 50):1000, :, i], axis=0), [1550, 1])
         trialeeg_corr[950:2500, :, i] = trialeeg[950:2500, :, i] - baseline_mean2
 
-    # compare the component ERP and the eeg ERP
-    fig,ax = plt.subplots(2,1)
-    ax[0].plot(np.arange(-100,2000,2), np.mean(trialcomponent_corr[450:1500], axis = 2))
-    ax[0].axvline(1000)
-    ax[0].axvline(0)
-    ax[0].set_title("erp in the component space")
-
-    ax[1].plot(np.arange(-100,2000,2), np.mean(trialeeg_corr[450:1500, goodchans,:], axis = 2))
-    ax[1].set_title("erp from the raw data")
-    ax[1].axvline(1000)
-    ax[1].axvline(0)
+    # # compare the component ERP and the eeg ERP
+    # fig,ax = plt.subplots(2,1)
+    # ax[0].plot(np.arange(-100,2000,2), np.mean(trialcomponent_corr[450:1500], axis = 2))
+    # ax[0].axvline(1000)
+    # ax[0].axvline(0)
+    # ax[0].set_title("erp in the component space")
+    #
+    # ax[1].plot(np.arange(-100,2000,2), np.mean(trialeeg_corr[450:1500, goodchans,:], axis = 2))
+    # ax[1].set_title("erp from the raw data")
+    # ax[1].axvline(1000)
+    # ax[1].axvline(0)
 
     # get the correlation coefficient between EOG and channel from Source Matrix
     chanmatrix = np.column_stack((S, eog))
@@ -240,7 +241,7 @@ def generate_ICAplots(subID):
     ax[1].axvline(0)
     fig.suptitle(f"{subID}")
 
-    getline(np.arange(-100, 700, 2), np.mean(trialeeg_corr[950:1350], axis=2))
+    getline(np.arange(-100, 700, 2), np.mean(trialeeg_corr[950:1350, goodchans,:], axis=2))
 
 
     plt.savefig((f'/home/jenny/ostwald-data/clean-eeg-converted/ICA/Figures/{subID}componentERP.png'), \

@@ -23,6 +23,7 @@ from collections import Counter
 import imagesc
 import preprocess_ostwald as po
 import get_erp_ostwald as geo
+from linepick import *
 
 path = '/home/jenny/ostwald-data/clean-eeg-converted/'
 
@@ -170,8 +171,8 @@ def get_ica(subID, path, runica=False):
     data = data.astype(float)
 
     # seperate eeg and eog ecg
-    badchans = [30,31]
-    eeg = np.delete(data, slice(30, 32), axis=1)
+    badchans = [30,31,5,21,23,46,61]
+    eeg = np.delete(data, badchans, axis=1)
 
     # check the data by looking at the correlation coeeficient between channels
     # fig,ax = plt.subplots()
@@ -181,8 +182,7 @@ def get_ica(subID, path, runica=False):
     # runfastica
 
     if runica is True:
-        print("icarunning")
-        ica = FastICA(n_components = 62,  whiten=True, fun = 'cube', max_iter = 10000000)
+        ica = FastICA(n_components = 57,  whiten=True, fun = 'cube', max_iter = 10000000)
         print("running fastICA......")
         S = ica. fit_transform(eeg)
         A = ica.mixing_
@@ -200,11 +200,11 @@ def get_ica(subID, path, runica=False):
 
     #pick a time window to see if it recovers
     fig,ax = plt.subplots(3,1)
-    ax[0].plot(eeg[2000:6000,:])
+    ax[0].plot(eeg[5000:9000,:])
     ax[0].set_title("original signal")
-    ax[1].plot(S[2000:6000,:])
+    ax[1].plot(S[5000:9000,:])
     ax[1].set_title("source signal")
-    ax[2].plot(np.transpose(recover)[2000:6000,:])
+    ax[2].plot(np.transpose(recover)[5000:9000,:])
     ax[2].set_title("recover signal")
     fig.set_size_inches(11.56,8.91)
 
@@ -322,9 +322,3 @@ def get_ica(subID, path, runica=False):
     savemat(f'/home/jenny/ostwald-data/clean-eeg-converted/ICA/{subID}_ica.mat',icadict)
     return icadict
 
-# # run through each subject
-# sublist, _ = geo.get_sub(path)
-# sublist = np.delete(sublist,0)
-# for i in sublist:
-#     get_ica(i, path, runica=False)
-#     print(f"finish running {i}")
