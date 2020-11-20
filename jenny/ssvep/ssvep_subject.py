@@ -22,8 +22,11 @@ from scipy import signal
 #%%
 # import lab modules
 import timeop
-import diffusion
 #%%
+
+path = '/home/jenny/pdmattention/task3/'
+# picking the training set
+subIDs = choose_subs(1, path)
 
 
 def getSSVEP(data,sr,window,ssvep_freq,goodtrials,goodchans):
@@ -89,11 +92,11 @@ def getSSVEP(data,sr,window,ssvep_freq,goodtrials,goodchans):
 def SSVEP_task3(subID):
     currentSub = subID[0:4]
     print('Current Subject: ', currentSub)
-    pcdict = read_mat(path + subID + '_task3_photocells.mat')
-    datadict = read_mat(path + subID + '_task3_final.mat')
-    behavdict = read_mat(path + subID[0:4] + '_behavior_final.mat')
+    pcdict = read_mat(path + subID + 'task3_photocells.mat')
+    datadict = read_mat(path + subID + 'task3_final.mat')
+    behavdict = read_mat(path + subID[0:5] + 'behavior_final.mat')
+    rt = behavdict['rt']
 
-    data = np.array(datadict['data'])
 
     artifact = np.array(datadict['artifact'])
     sr = np.array(datadict['sr'])
@@ -107,10 +110,10 @@ def SSVEP_task3(subID):
     goodtrials = np.squeeze(np.array(np.where(artifact0 < 20)))
     goodchans = np.squeeze(np.array(np.where(artifact1 < 40)))
 
-    # BehEEG_int = list(set(beh_ind) & set(goodtrials))
-    finalgoodtrials = np.array(diffusion.compLists(beh_ind, goodtrials))
-    # finalgoodtrials = np.array(BehEEG_int)
-    
+    # choosing the trials that have RT over 300ms from the goodtrial list
+    finalgoodtrials = np.array(compLists(beh_ind, goodtrials))
+    rt_finalgoodtrials = behavdict['rt']
+
 
 
     p = pcdict['photostim']
@@ -134,22 +137,47 @@ def SSVEP_task3(subID):
     
     return stimulus_ssvep, noise_ssvep, photocell_ssvep
 #%%
-#JENNY - YOU NEED TO MAKE USE OF SOME OF THE STUFF HERE.  SPECIFICALLY, diffusion.choose_subs selects
-#a subset of 36 subjects, and sets aside 12 subjects for model testing.  Also, dont know how you want to 
-#save the three ssvep structures for each subject. 
-#Finally, to do the time-frequency analysis, I dont think a wavelet will work, because we need to precisely align 
-#to external events and align windows across frequencies.  But well have to try it.  I think FFT of 100 ms windows amd 
-#possibly Hilbert Transform will work.  First we should try it on average ERP.  
-#I think it will be almost impossible to do the time course on single trials.  But it might work to contrast subjects
-# or to contrast quantiles of RT. 
-#LASTLY, YOU need to make a separate script that makes any plots you need. 
-#debug = True
-#lvlAnalysis = 1
-#path = '/home/jenny/pdmattention/task3/'
-#subIDs = diffusion.choose_subs(lvlAnalysis, path)
-#subIDs.remove('s181_ses1_')
-#subIDs.remove('s223_ses1_')
-#subIDs2 = ['s181_ses1']
+
+
+def choose_subs(lvlAnalysis, path):
+    # this function returns a list of subject IDs and task based on whether or not this is testing
+    # analysis or analysis of all subjects
+    # --------------------------------------------------------------------------
+    # returns a list of subject IDs
+
+    allDataFiles = os.listdir(path)
+
+    if lvlAnalysis == 1:
+        excludeSubs = ['s184', 's187', 's190', 's193', 's199', 's209', 's214', 's220', 's225', 's228', \
+                       's234', 's240', 's213', 's235']
+
+        subIDs = []
+
+        for files in allDataFiles:
+            if (files[16:] == 'expinfo.mat') and ((files[:4] not in excludeSubs) == True):
+                subIDs.append(files[0:10])
+
+    elif lvlAnalysis == 2:
+        subIDs = []
+        for files in allDataFiles:
+            if files[16:] == 'expinfo.mat':
+                subIDs.append(files[0:10])
+
+    try:
+        subIDs.remove('s193_ses2_')
+        subIDs.remove('s193_ses1_')
+
+    except:
+        pass
+
+    return subIDs
+
+
+def compLists(list1, list2):
+    final = [element for element in list1 if element in list2]
+
+    return final
+
 #
 #for subID in subIDs2:
 #    ssvep_stimulus,ssvep_noise, ssvep_photocell = SSVEP_task3(subID)
@@ -333,3 +361,45 @@ plt.show
 #    
 #    plt.tight_layout()
 #    plt.show
+
+
+# these are the scripts from diffusion.py
+
+def choose_subs(lvlAnalysis, path):
+    # this function returns a list of subject IDs and task based on whether or not this is testing
+    # analysis or analysis of all subjects
+    # --------------------------------------------------------------------------
+    # returns a list of subject IDs
+
+    allDataFiles = os.listdir(path)
+
+    if lvlAnalysis == 1:
+        excludeSubs = ['s184', 's187', 's190', 's193', 's199', 's209', 's214', 's220', 's225', 's228', \
+                       's234', 's240', 's213', 's235']
+
+        subIDs = []
+
+        for files in allDataFiles:
+            if (files[16:] == 'expinfo.mat') and ((files[:4] not in excludeSubs) == True):
+                subIDs.append(files[0:10])
+
+    elif lvlAnalysis == 2:
+        subIDs = []
+        for files in allDataFiles:
+            if files[16:] == 'expinfo.mat':
+                subIDs.append(files[0:10])
+
+    try:
+        subIDs.remove('s193_ses2_')
+        subIDs.remove('s193_ses1_')
+
+    except:
+        pass
+
+    return subIDs
+
+
+def compLists(list1, list2):
+    final = [element for element in list1 if element in list2]
+
+    return final
