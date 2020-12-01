@@ -19,6 +19,7 @@ from matplotlib import pyplot as plt
 from scipy.fftpack import fft2
 from scipy.fftpack import fft
 from scipy import signal
+import os
 #%%
 # import lab modules
 import timeop
@@ -31,13 +32,25 @@ subIDs = choose_subs(1, path)
 
 subID = 's231_ses2_'  # the subject I was using
 stimulus_ssvep, noise_ssvep, photocell = SSVEP_task3(subID)
-stim_power = np.abs(stimulus_ssvep['erp_fft'][30,:]) **2
-noise_power = 1/2 * (np.abs(stimulus_ssvep['erp_fft'][29,:]) **2 + np.abs(stimulus_ssvep['erp_fft'][31,:]) **2)
+
+# this is the the 1000 * 128 fft from erp
+stim_erpf = stimulus_ssvep['erp_fft']
+
+# get the power at 30Hz (signal) and 29Hz + 31Hz (noise) from all channels
+stim_power = np.abs(stim_erpf[30,:]) **2
+noise_power = 1/2 * (np.abs(stim_erpf[29,:]) **2 + np.abs(stim_erpf[31,:]) **2)
 snr = 2 * stim_power / noise_power
 
+# plotting the spectra of the erp after svd
+sr = 1000
+nyquist = sr/2
+xf = np.linspace(0.0, nyquist, len(stim_erpf) // 2 +1)
+plt.plot(xf[10:40], (2 * np.abs(stim_erpf)[10:40,:]) ** 2)
 
 def getSSVEP(data,sr,window,ssvep_freq,goodtrials,goodchans):
-    """ this function has ssvep structure including fourier coefficients of erp and svd procedure """
+    """ this function generates ssvep structure including fourier coefficients of
+     erp, ssvep power and output from svd procedure """
+
     SSVEP = dict();
 
     #some renaming
@@ -156,10 +169,9 @@ def SSVEP_task3(subID):
     noise_ssvep = getSSVEP(data,sr,window,40,finalgoodtrials,goodchans)
 
     return stimulus_ssvep, noise_ssvep, photocell
-#%%
 
 
-
+# here are some reivsed functions from diffusion.py by Mariel
 def choose_subs(lvlAnalysis, path):
     # this function returns a list of subject IDs and task based on whether or not this is testing
     # analysis or analysis of all subjects
@@ -199,8 +211,8 @@ def compListsInd(list1, list2):
     ind = [ind for ind, element in enumerate(list1) if element in list2]
     return ind, final
 
-#
-# #
+### old scripts ###
+
 # #for subID in subIDs2:
 # #    ssvep_stimulus,ssvep_noise, ssvep_photocell = SSVEP_task3(subID)
 # #    outname = path+subID+'_stimulus_SSVEP.mat'
@@ -382,5 +394,5 @@ def compListsInd(list1, list2):
 # #    plt.show
 #
 #
-# # these are the scripts from diffusion.py
+
 
