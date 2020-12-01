@@ -47,6 +47,7 @@ nyquist = sr/2
 xf = np.linspace(0.0, nyquist, len(stim_erpf) // 2 +1)
 plt.plot(xf[10:40], (2 * np.abs(stim_erpf)[10:40,:]) ** 2)
 
+
 def getSSVEP(data,sr,window,ssvep_freq,goodtrials,goodchans):
     """ this function generates ssvep structure including fourier coefficients of
      erp, ssvep power and output from svd procedure """
