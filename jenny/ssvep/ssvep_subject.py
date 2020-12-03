@@ -28,24 +28,53 @@ import timeop
 path = '/home/ramesh/pdmattention/task3/'
 # picking the training set
 subIDs = choose_subs(1, path)
-
-
 subID = 's231_ses2_'  # the subject I was using
-stimulus_ssvep, noise_ssvep, photocell = SSVEP_task3(subID)
 
-# this is the the 1000 * 128 fft from erp
-stim_erpf = stimulus_ssvep['erp_fft']
 
-# get the power at 30Hz (signal) and 29Hz + 31Hz (noise) from all channels
-stim_power = np.abs(stim_erpf[30,:]) **2
-noise_power = 1/2 * (np.abs(stim_erpf[29,:]) **2 + np.abs(stim_erpf[31,:]) **2)
-snr = 2 * stim_power / noise_power
+def subject_average(subID):
+    '''this function returns the power and snr when frequency is 30 and 40 for all conditions'''
+    stimulus_ssvep, noise_ssvep, photocell, behavdict, _, _ = SSVEP_task3(subID)
+    StimSnr, StimPower = get_power(stimulus_ssvep, behavdict, 30)
+    NoiseSnr, NoisePower = get_power(stimulus_ssvep, behavdict, 40)
+    pc_chans = np.where(StimSnr == 0)
+    print('photocell channels to skip:'+ str(pc_chans))
+    return StimSnr, StimPower, NoiseSnr, NoisePower, pc_chans
 
-# plotting the spectra of the erp after svd
-sr = 1000
-nyquist = sr/2
-xf = np.linspace(0.0, nyquist, len(stim_erpf) // 2 +1)
-plt.plot(xf[10:40], (2 * np.abs(stim_erpf)[10:40,:]) ** 2)
+def subject_bycond(subID, freq):
+    '''this function returns the power and snr when frequency is 30 and 40 by condition'''
+    _,_,_, behavdict, stim_erpf, noise_erpf =  SSVEP_task3(subID)
+    StimPower = 2 * np.abs(stim_erpf[freq,:,:])
+    StimNoisePower =  2 * (1/2 * (np.abs(stim_erpf[freq-1,:,:]) **2 + np.abs(stim_erpf[freq+1,:,:]) **2))
+    StimSnr = np.divide (StimPower, StimNoisePower, out=np.zeros_like(StimPower), where=StimNoisePower!=0)
+
+
+
+    return StimSnr, StimPower, NoiseSnr, NoisePower
+
+
+def get_power(ssvep, behavdict, freq):
+    '''this function returns the power and snr after fft the ERPs'''
+    # this is the the 1000 * 128 fft from erp
+    erpf = ssvep['erp_fft']
+    goodchans = ssvep['goodchannels']
+    goodtrials = ssvep['goodtrials']
+    condition = behavdict['condition']
+
+    # get the power at 30Hz (signal) and 29Hz + 31Hz (noise) from all channels
+    signal_power = 2 * np.abs(erpf[freq,:]) **2
+    noise_power = 2 * (1/2 * (np.abs(erpf[freq-1,:]) **2 + np.abs(erpf[freq+1,:]) **2))
+
+    # get the snr, the division ==0 for all photocell channels
+    snr = np.divide (signal_power, noise_power, out=np.zeros_like(signal_power), where=noise_power!=0)
+    return snr, signal_power
+
+
+    # plotting the spectra of the erp after svd
+    sr = 1000
+    nyquist = sr/2
+    xf = np.linspace(0.0, nyquist, len(stim_erpf) // 2 +1)
+    plt.plot(xf[10:40], (2 * np.abs(stim_erpf)[10:40,:]) ** 2)
+
 
 
 def getSSVEP(data,sr,window,ssvep_freq,goodtrials,goodchans):
@@ -169,7 +198,22 @@ def SSVEP_task3(subID):
     stimulus_ssvep = getSSVEP(data,sr,window,30,finalgoodtrials,goodchans)
     noise_ssvep = getSSVEP(data,sr,window,40,finalgoodtrials,goodchans)
 
-    return stimulus_ssvep, noise_ssvep, photocell
+    # same procedure analyzed by condition
+    ind_ez = np.where(condition_final == 1)
+    ind_md = np.where(condition_final == 2)
+    ind_hr = np.where(condition_final == 3 )
+
+    stim_ez = getSSVEP(data,sr,window,30, finalgoodtrials[ind_ez], goodchans)
+    stim_md = getSSVEP(data, sr, window, 30, finalgoodtrials[ind_md], goodchans)
+    stim_hr = getSSVEP(data, sr, window, 30, finalgoodtrials[ind_hr], goodchans)
+    noise_ez = getSSVEP(data,sr,window, 40, finalgoodtrials[ind_ez], goodchans)
+    noise_md = getSSVEP(data, sr, window, 40, finalgoodtrials[ind_md], goodchans)
+    noise_hr = getSSVEP(data, sr, window, 40, finalgoodtrials[ind_hr], goodchans)
+
+    stim_erpf = np.dstack((stim_ez['erp_fft'], stim_md['erp_fft'], stim_hr['erp_fft']))
+    noise_erpf = np.dstack((noise_ez['erp_fft'], noise_md['erp_fft'], noise_hr['erp_fft']))
+
+    return stimulus_ssvep, noise_ssvep, photocell, behavdict, stim_erpf, noise_erpf
 
 
 # here are some reivsed functions from diffusion.py by Mariel
