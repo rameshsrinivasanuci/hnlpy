@@ -30,6 +30,16 @@ path = '/home/ramesh/pdmattention/task3/'
 subIDs = choose_subs(1, path)
 subID = 's231_ses2_'  # the subject I was using
 
+# some variables
+
+def trial_ssvep(subID):
+    '''this function returns the power and snr of single trials
+    when frequency is 30 and 40 for all conditions'''
+    stimulus_ssvep, noise_ssvep, photocell, behavdict, _, _ = SSVEP_task3(subID)
+    stimulus_
+    pc_chans = np.where(StimSnr == 0)
+    print('photocell channels to skip:'+ str(pc_chans))
+    return StimSnr, StimPower, NoiseSnr, NoisePower, pc_chans
 
 def subject_average(subID):
     '''this function returns the power and snr when frequency is 30 and 40 for all conditions'''
@@ -44,11 +54,12 @@ def subject_bycond(subID, freq):
     '''this function returns the power and snr when frequency is 30 and 40 by condition'''
     _,_,_, behavdict, stim_erpf, noise_erpf =  SSVEP_task3(subID)
     StimPower = 2 * np.abs(stim_erpf[freq,:,:])
-    StimNoisePower =  2 * (1/2 * (np.abs(stim_erpf[freq-1,:,:]) **2 + np.abs(stim_erpf[freq+1,:,:]) **2))
-    StimSnr = np.divide (StimPower, StimNoisePower, out=np.zeros_like(StimPower), where=StimNoisePower!=0)
+    StimNeighbourPower =  2 * (1/2 * (np.abs(stim_erpf[freq-1,:,:]) **2 + np.abs(stim_erpf[freq+1,:,:]) **2))
+    StimSnr = np.divide (StimPower, StimNeighbourPower, out=np.zeros_like(StimPower), where=StimNeighbourPower!=0)
 
-
-
+    NoisePower = 2 * np.abs(noise_erpf[freq,:,:])
+    NoiseNeighbourPower =  2 * (1/2 * (np.abs(noise_erpf[freq-1,:,:]) **2 + np.abs(noise_erpf[freq+1,:,:]) **2))
+    NoiseSnr = np.divide (NoisePower, NoiseNeighbourPower, out=np.zeros_like(NoisePower), where=NoiseNeighbourPower!=0)
     return StimSnr, StimPower, NoiseSnr, NoisePower
 
 
@@ -127,9 +138,9 @@ def getSSVEP(data,sr,window,ssvep_freq,goodtrials,goodchans):
     for trial in goodtrials: 
         trialdata = np.squeeze(data[startsamp:endsamp,:,trial])
         trialfft = fft(trialdata,axis=0)
-        trialproject = np.matmul(trialfft,weights)
+        trialproject = np.matmul(trialfft,weights_long)
         trialestimate[:,trial] = trialproject[:,0] #new coefficients
-   
+
     SSVEP['goodtrials'] = goodtrials
     SSVEP['goodchannels'] = goodchans
     SSVEP['sr'] = sr;
@@ -217,11 +228,8 @@ def SSVEP_task3(subID):
 
 
 # here are some reivsed functions from diffusion.py by Mariel
+
 def choose_subs(lvlAnalysis, path):
-    # this function returns a list of subject IDs and task based on whether or not this is testing
-    # analysis or analysis of all subjects
-    # --------------------------------------------------------------------------
-    # returns a list of subject IDs
 
     allDataFiles = os.listdir(path)
 
