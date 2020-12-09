@@ -30,33 +30,76 @@ path = '/home/ramesh/pdmattention/task3/'
 # picking the training set
 subIDs = choose_subs(1, path)
 subID =  's239_ses1_'    # use this subject for CORAL
-subIDs.remove('s222_ses2_')
+subIDs.remove('s236_ses1_')
+
+
 
 # some variables for adaptation
 
-Target = trial_ssvep('s239_ses1_', 30)
-TransMatrix = np.zeros((121,360,len(subIDs)-1))
+Target, _,_,_,_,_ = trial_ssvep('s239_ses1_', 30)
+TransMatrix = np.zeros((121,360,len(subIDs)))
+
+
+# get TransMatrx
 for index, sub in enumerate(subIDs):
     if sub !='s239_ses1_':
-        Source = trial_ssvep(sub, 30)
+        print(index)
+        Source, _, _, _, _, _ = trial_ssvep(sub, 30)
         transfor = CORAL()
         transfor.fit(Source, Target)
         Xs_trans = transfor.transfer(Source)  # adjusted source matrix
+    else:
+        Xs_trans = Target
+        print(index)
     TransMatrix[:,:,index] = Xs_trans
-    savemat('/home/ramesh/pdmattention/ssvep/DomainAligned_TrainSet.mat', TransMatrix)
+savemat('/home/ramesh/pdmattention/ssvep/DomainAdapt.mat', {'TransMatrix':TransMatrix})
+
+# get goodtrial TransMatrix
+Trainset = []
+
+for index, sub in enumerate(subIDs):
+    if sub !='s239_ses1_':
+        print(index)
+        Source, behavdict, finalgoodtrials, acc, rt, rt_class = trial_ssvep(sub, 30)
+        transfor = CORAL()
+        transfor.fit(Source, Target)
+        Xs_trans = transfor.transfer(Source)  # adjusted source matrix
+    else:
+        print(index)
+        Xs_trans = Target
+        _, behavdict, finalgoodtrials, acc, rt, rt_class = trial_ssvep(sub, 30)
+    Xs_trans = Xs_trans[:,finalgoodtrials].T
+    np.append
+
+    BehavDict
 
 def trial_ssvep(subID, freq):
     '''this function returns the power and snr of single trials
     when frequency is 30 and 40 for all conditions'''
-    stimulus_ssvep, noise_ssvep, photocell, behavdict, _, _ = SSVEP_task3(subID)
+    stimulus_ssvep, noise_ssvep, photocell, _, _, _, behav_final = SSVEP_task3(subID)
     stim_estimate = stimulus_ssvep['trial_bychan']
     valid_chans = np.where(stimulus_ssvep['erp_fft'][0,] != 0)
+    if len(valid_chans[0]) != 121:
+        print('WARNING: %i channels with 0s detected, using the defalt 121 channels'% len(valid_chans[0]))
+        valid_chans, _ = default_validchans()
     stim_Signal =  2 * np.abs(stim_estimate[freq,valid_chans,:]) **2
     stim_Noise =  2 * (1/2 * (np.abs(stim_estimate[freq-1,valid_chans,:]) **2 + np.abs(stim_estimate[freq+1,valid_chans,:]) **2))
     StimSnr = np.squeeze(np.divide(stim_Signal, stim_Noise, out=np.zeros_like(stim_Signal), where=stim_Noise != 0))
-    return StimSnr
-#
-#     finalgoodtrials = stimulus_ssvep['goodtrials']
+    finalgoodtrials = stimulus_ssvep['goodtrials']
+    acc = behav_final['acc']
+    rt = behav_final['rt']
+    rt_tertile = np.percentile(rt,[33.33, 66.66])
+    rt_class = np.zeros(len(rt))
+    rt_class[(rt > rt_tertile[0]) & (rt <= rt_tertile[1])] = 1
+    rt_class[rt > rt_tertile[1]] = 2
+    return StimSnr, finalgoodtrials, acc, rt, rt_class
+
+def ssvep_goodtrials(subID, ):
+    '''this function select the good trials only and for each subject,
+    together with the corresponding rt and acc'''
+
+
+finalgoodtrials = stimulus_ssvep['goodtrials']
 #     pc_chans = np.where(stimulus_ssvep['erp_fft'][0,] == 0)
 # #    [:,:,finalgoodtrials]
 # #    noise_estimate = noise_ssvep['trial_bychan'][:,:,finalgoodtrials]
@@ -76,7 +119,7 @@ def trial_ssvep(subID, freq):
 
 def subject_average(subID):
     '''this function returns the power and snr when frequency is 30 and 40 for all conditions'''
-    stimulus_ssvep, noise_ssvep, photocell, behavdict, _, _ = SSVEP_task3(subID)
+    stimulus_ssvep, noise_ssvep, photocell, behavdict, _, _, _ = SSVEP_task3(subID)
     StimSnr, StimPower = get_power(stimulus_ssvep, behavdict, 30)
     NoiseSnr, NoisePower = get_power(stimulus_ssvep, behavdict, 40)
     pc_chans = np.where(StimSnr == 0)
@@ -85,7 +128,7 @@ def subject_average(subID):
 
 def subject_bycond(subID, freq):
     '''this function returns the power and snr when frequency is 30 and 40 by condition'''
-    _,_,_, behavdict, stim_erpf, noise_erpf =  SSVEP_task3(subID)
+    _,_,_, behavdict, stim_erpf, noise_erpf, _ =  SSVEP_task3(subID)
     StimPower = 2 * np.abs(stim_erpf[freq,:,:]) **2
     StimNeighbourPower =  2 * (1/2 * (np.abs(stim_erpf[freq-1,:,:]) **2 + np.abs(stim_erpf[freq+1,:,:]) **2))
     StimSnr = np.divide (StimPower, StimNeighbourPower, out=np.zeros_like(StimPower), where=StimNeighbourPower!=0)
@@ -225,6 +268,8 @@ def SSVEP_task3(subID):
     # get the index and apply to rt, condition and accuracy
     ind, finalgoodtrials = np.array(compListsInd(beh_ind, goodtrials))
     rt_final = rt[ind]
+    acc_final = correct[ind]
+    behav_final = {'rt': rt_final, 'acc': acc_final}
     condition_final = condition[ind]
     correct_final = correct[ind]
 
@@ -261,8 +306,15 @@ def SSVEP_task3(subID):
     stim_erpf = np.dstack((stim_ez['erp_fft'], stim_md['erp_fft'], stim_hr['erp_fft']))
     noise_erpf = np.dstack((noise_ez['erp_fft'], noise_md['erp_fft'], noise_hr['erp_fft']))
 
-    return stimulus_ssvep, noise_ssvep, photocell, behavdict, stim_erpf, noise_erpf
+    return stimulus_ssvep, noise_ssvep, photocell, behavdict, stim_erpf, noise_erpf, behav_final
 
+
+def default_validchans():
+    '''this function returns the channels that are non photocells and photocells'''
+    stimulus_ssvep, _, _, _, _, _,_ = SSVEP_task3('s239_ses1_')
+    valid_chans = np.where(stimulus_ssvep['erp_fft'][0,] != 0)
+    pc_chans = np.where(stimulus_ssvep['erp_fft'][0,] == 0)
+    return valid_chans, pc_chans
 
 # here are some reivsed functions from diffusion.py by Mariel
 
