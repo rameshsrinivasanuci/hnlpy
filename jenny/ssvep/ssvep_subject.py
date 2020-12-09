@@ -20,6 +20,7 @@ from scipy.fftpack import fft2
 from scipy.fftpack import fft
 from scipy import signal
 import os
+from transfertools.models import TCA, CORAL
 #%%
 # import lab modules
 import timeop
@@ -28,18 +29,50 @@ import timeop
 path = '/home/ramesh/pdmattention/task3/'
 # picking the training set
 subIDs = choose_subs(1, path)
-subID = 's231_ses2_'  # the subject I was using
+subID =  's239_ses1_'    # use this subject for CORAL
+subIDs.remove('s222_ses2_')
 
-# some variables
+# some variables for adaptation
 
-def trial_ssvep(subID):
+Target = trial_ssvep('s239_ses1_', 30)
+TransMatrix = np.zeros((121,360,len(subIDs)-1))
+for index, sub in enumerate(subIDs):
+    if sub !='s239_ses1_':
+        Source = trial_ssvep(sub, 30)
+        transfor = CORAL()
+        transfor.fit(Source, Target)
+        Xs_trans = transfor.transfer(Source)  # adjusted source matrix
+    TransMatrix[:,:,index] = Xs_trans
+    savemat('/home/ramesh/pdmattention/ssvep/DomainAligned_TrainSet.mat', TransMatrix)
+
+def trial_ssvep(subID, freq):
     '''this function returns the power and snr of single trials
     when frequency is 30 and 40 for all conditions'''
     stimulus_ssvep, noise_ssvep, photocell, behavdict, _, _ = SSVEP_task3(subID)
-    stimulus_
-    pc_chans = np.where(StimSnr == 0)
-    print('photocell channels to skip:'+ str(pc_chans))
-    return StimSnr, StimPower, NoiseSnr, NoisePower, pc_chans
+    stim_estimate = stimulus_ssvep['trial_bychan']
+    valid_chans = np.where(stimulus_ssvep['erp_fft'][0,] != 0)
+    stim_Signal =  2 * np.abs(stim_estimate[freq,valid_chans,:]) **2
+    stim_Noise =  2 * (1/2 * (np.abs(stim_estimate[freq-1,valid_chans,:]) **2 + np.abs(stim_estimate[freq+1,valid_chans,:]) **2))
+    StimSnr = np.squeeze(np.divide(stim_Signal, stim_Noise, out=np.zeros_like(stim_Signal), where=stim_Noise != 0))
+    return StimSnr
+#
+#     finalgoodtrials = stimulus_ssvep['goodtrials']
+#     pc_chans = np.where(stimulus_ssvep['erp_fft'][0,] == 0)
+# #    [:,:,finalgoodtrials]
+# #    noise_estimate = noise_ssvep['trial_bychan'][:,:,finalgoodtrials]
+#
+#     stim_Signal =  2 * np.abs(stim_estimate[freq,valid_chans,:]) **2
+#     stim_Noise =  2 * (1/2 * (np.abs(stim_estimate[freq-1,valid_chans,:]) **2 + np.abs(stim_estimate[freq+1,valid_chans,:]) **2))
+#     stim_SNR = np.squeeze(np.divide(stim_Signal, stim_Noise))
+#     #    noise_estimatePower = stim_estimate[30,valid_chans,:]
+#     print('photocell channels to skip:'+ str(pc_chans))
+#     acc = behavdict['correct']
+#     rt = behavdict['rt']
+#     rt_tertile = np.percentile(behavdict['rt'],[33.33, 66.66])
+#     rt_class = np.zeros(len(rt))
+#     rt_class[(rt > rt_tertile[0]) & (rt <= rt_tertile[1])] = 1
+#     rt_class[rt > rt_tertile[1]] = 2
+#     return stim_SNR, acc, rt_class,
 
 def subject_average(subID):
     '''this function returns the power and snr when frequency is 30 and 40 for all conditions'''
@@ -53,11 +86,11 @@ def subject_average(subID):
 def subject_bycond(subID, freq):
     '''this function returns the power and snr when frequency is 30 and 40 by condition'''
     _,_,_, behavdict, stim_erpf, noise_erpf =  SSVEP_task3(subID)
-    StimPower = 2 * np.abs(stim_erpf[freq,:,:])
+    StimPower = 2 * np.abs(stim_erpf[freq,:,:]) **2
     StimNeighbourPower =  2 * (1/2 * (np.abs(stim_erpf[freq-1,:,:]) **2 + np.abs(stim_erpf[freq+1,:,:]) **2))
     StimSnr = np.divide (StimPower, StimNeighbourPower, out=np.zeros_like(StimPower), where=StimNeighbourPower!=0)
 
-    NoisePower = 2 * np.abs(noise_erpf[freq,:,:])
+    NoisePower = 2 * np.abs(noise_erpf[freq,:,:]) **2
     NoiseNeighbourPower =  2 * (1/2 * (np.abs(noise_erpf[freq-1,:,:]) **2 + np.abs(noise_erpf[freq+1,:,:]) **2))
     NoiseSnr = np.divide (NoisePower, NoiseNeighbourPower, out=np.zeros_like(NoisePower), where=NoiseNeighbourPower!=0)
     return StimSnr, StimPower, NoiseSnr, NoisePower
@@ -134,11 +167,14 @@ def getSSVEP(data,sr,window,ssvep_freq,goodtrials,goodchans):
 
     # Now use the weights to loop through indivial trials 
     trialestimate = np.zeros((endsamp-startsamp,ntrial),dtype=complex)
+    trial_bychan = np.zeros((endsamp-startsamp,nchan, ntrial), dtype = complex)
 
     for trial in goodtrials: 
         trialdata = np.squeeze(data[startsamp:endsamp,:,trial])
         trialfft = fft(trialdata,axis=0)
         trialproject = np.matmul(trialfft,weights_long)
+        trialfft_weighted = trialfft * weights_long.T
+        trial_bychan[:,:,trial] = trialfft_weighted
         trialestimate[:,trial] = trialproject[:,0] #new coefficients
 
     SSVEP['goodtrials'] = goodtrials
@@ -156,6 +192,7 @@ def getSSVEP(data,sr,window,ssvep_freq,goodtrials,goodchans):
     SSVEP['weights'] = weights
     SSVEP['power_sub'] = channel_power
     SSVEP['singular'] = np.diag(s)
+    SSVEP['trial_bychan'] = trial_bychan
     return SSVEP
     
 
