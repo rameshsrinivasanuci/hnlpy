@@ -27,51 +27,7 @@ import timeop
 #%%
 
 path = '/home/ramesh/pdmattention/task3/'
-# picking the training set
-subIDs = choose_subs(1, path)
-subID =  's239_ses1_'    # use this subject for CORAL
-subIDs.remove('s236_ses1_')
 
-
-
-# some variables for adaptation
-
-Target, _,_,_,_,_ = trial_ssvep('s239_ses1_', 30)
-TransMatrix = np.zeros((121,360,len(subIDs)))
-
-
-# get TransMatrx
-for index, sub in enumerate(subIDs):
-    if sub !='s239_ses1_':
-        print(index)
-        Source, _, _, _, _, _ = trial_ssvep(sub, 30)
-        transfor = CORAL()
-        transfor.fit(Source, Target)
-        Xs_trans = transfor.transfer(Source)  # adjusted source matrix
-    else:
-        Xs_trans = Target
-        print(index)
-    TransMatrix[:,:,index] = Xs_trans
-savemat('/home/ramesh/pdmattention/ssvep/DomainAdapt.mat', {'TransMatrix':TransMatrix})
-
-# get goodtrial TransMatrix
-Trainset = []
-
-for index, sub in enumerate(subIDs):
-    if sub !='s239_ses1_':
-        print(index)
-        Source, behavdict, finalgoodtrials, acc, rt, rt_class = trial_ssvep(sub, 30)
-        transfor = CORAL()
-        transfor.fit(Source, Target)
-        Xs_trans = transfor.transfer(Source)  # adjusted source matrix
-    else:
-        print(index)
-        Xs_trans = Target
-        _, behavdict, finalgoodtrials, acc, rt, rt_class = trial_ssvep(sub, 30)
-    Xs_trans = Xs_trans[:,finalgoodtrials].T
-    np.append
-
-    BehavDict
 
 def trial_ssvep(subID, freq):
     '''this function returns the power and snr of single trials
@@ -94,28 +50,6 @@ def trial_ssvep(subID, freq):
     rt_class[rt > rt_tertile[1]] = 2
     return StimSnr, finalgoodtrials, acc, rt, rt_class
 
-def ssvep_goodtrials(subID, ):
-    '''this function select the good trials only and for each subject,
-    together with the corresponding rt and acc'''
-
-
-finalgoodtrials = stimulus_ssvep['goodtrials']
-#     pc_chans = np.where(stimulus_ssvep['erp_fft'][0,] == 0)
-# #    [:,:,finalgoodtrials]
-# #    noise_estimate = noise_ssvep['trial_bychan'][:,:,finalgoodtrials]
-#
-#     stim_Signal =  2 * np.abs(stim_estimate[freq,valid_chans,:]) **2
-#     stim_Noise =  2 * (1/2 * (np.abs(stim_estimate[freq-1,valid_chans,:]) **2 + np.abs(stim_estimate[freq+1,valid_chans,:]) **2))
-#     stim_SNR = np.squeeze(np.divide(stim_Signal, stim_Noise))
-#     #    noise_estimatePower = stim_estimate[30,valid_chans,:]
-#     print('photocell channels to skip:'+ str(pc_chans))
-#     acc = behavdict['correct']
-#     rt = behavdict['rt']
-#     rt_tertile = np.percentile(behavdict['rt'],[33.33, 66.66])
-#     rt_class = np.zeros(len(rt))
-#     rt_class[(rt > rt_tertile[0]) & (rt <= rt_tertile[1])] = 1
-#     rt_class[rt > rt_tertile[1]] = 2
-#     return stim_SNR, acc, rt_class,
 
 def subject_average(subID):
     '''this function returns the power and snr when frequency is 30 and 40 for all conditions'''
@@ -211,6 +145,7 @@ def getSSVEP(data,sr,window,ssvep_freq,goodtrials,goodchans):
     # Now use the weights to loop through indivial trials 
     trialestimate = np.zeros((endsamp-startsamp,ntrial),dtype=complex)
     trial_bychan = np.zeros((endsamp-startsamp,nchan, ntrial), dtype = complex)
+    trial_fft = np.zeros((endsamp-startsamp,nchan, ntrial), dtype = complex)
 
     for trial in goodtrials: 
         trialdata = np.squeeze(data[startsamp:endsamp,:,trial])
@@ -218,7 +153,9 @@ def getSSVEP(data,sr,window,ssvep_freq,goodtrials,goodchans):
         trialproject = np.matmul(trialfft,weights_long)
         trialfft_weighted = trialfft * weights_long.T
         trial_bychan[:,:,trial] = trialfft_weighted
+        trial_fft[:, :, trial] = trialfft
         trialestimate[:,trial] = trialproject[:,0] #new coefficients
+
 
     SSVEP['goodtrials'] = goodtrials
     SSVEP['goodchannels'] = goodchans
@@ -236,6 +173,7 @@ def getSSVEP(data,sr,window,ssvep_freq,goodtrials,goodchans):
     SSVEP['power_sub'] = channel_power
     SSVEP['singular'] = np.diag(s)
     SSVEP['trial_bychan'] = trial_bychan
+    SSVEP['trialfft'] = trial_fft
     return SSVEP
     
 
