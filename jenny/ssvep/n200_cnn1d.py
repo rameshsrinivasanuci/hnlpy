@@ -38,6 +38,8 @@ class MyTrainingDataset(Dataset):
         self.transforms = transforms
         self.target_transforms = target_transforms
         self.data = np.load(self.root + '/data_n200bychan.npy')
+        # self.data2 = np.expand_dims(np.load(self.root + '/n200param.npy'), axis=1)
+        # self.data = np.hstack((self.data1,self.data2))
         self.targets = np.load(self.root + '/target.npy').astype(int)
 
         # oversample the inaccurate trials
@@ -68,6 +70,8 @@ class MyTestingDataset(Dataset):
         self.transforms = transforms
         self.target_transforms = target_transforms
         self.data = np.load(self.root + '/data_n200bychan.npy')
+        # self.data2 = np.expand_dims(np.load(self.root + '/n200param.npy'), axis=1)
+        # self.data = np.hstack((self.data1,self.data2))
         self.targets = np.load(self.root + '/target.npy').astype(int)
 
     def __len__(self):
@@ -112,15 +116,14 @@ data.shape
 class CNN1D(torch.nn.Module):
     def __init__(self):
         super(CNN1D, self).__init__()
-        self.conv1 = torch.nn.Conv1d(119,6, kernel_size=4, stride=1)
-        self.conv2 = torch.nn.Conv1d(6, 12, 4, 1)
+        self.conv1 = torch.nn.Conv1d(119,300, kernel_size=2, stride=1)
+        self.conv2 = torch.nn.Conv1d(300, 110, 4, 1)
         self.dropout1 = torch.nn.Dropout(p = .25)
         self.dropout2 = torch.nn.Dropout(p = 0.5)
         self.pool = torch.nn.MaxPool1d((2))
-        self.fc1 = torch.nn.Linear(2964,128)  #247
-        self.fc2 = torch.nn.Linear(128,2)
+        self.fc1 = torch.nn.Linear(27280,2)  #247
     def forward(self, x):
-        x = torch.squeeze(x)
+        x = torch.squeeze(x, axis=1)
         x = torch.transpose(x, 1,2)
         x = self.conv1(x)
         x = torch.relu(x)
@@ -132,9 +135,6 @@ class CNN1D(torch.nn.Module):
         x = self.dropout1(x)
         x = torch.flatten(x, 1)
         x = self.fc1(x)
-        x = torch.relu(x)
-        x = self.dropout2(x)
-        x = self.fc2(x)
         return x
 net = CNN1D().cuda()
 
@@ -216,7 +216,11 @@ for epoch in range(50):
     print('Test Prc:', torch.mean(torch.FloatTensor(prc_batch)))
 
 plt.figure()
-plt.plot(train_accuracy, label = 'training')
-plt.plot(test_accuracy, label = 'testing')
+plt.plot(train_accuracy, ls = '--', label = 'training accuracy')
+plt.plot(test_accuracy, ls = '--',label = 'testinging accuracy')
+plt.plot(train_precision, label = 'training precision')
+plt.plot(test_precision, label = 'testing precision')
+plt.plot()
 plt.legend(loc='best')
-plt.title('conv1D using raw N200 by channels')
+plt.title('CNN1D using N200 time series by channel')
+

@@ -5,6 +5,10 @@ Created on Sun May 10 16:05:45 2020
 
 @author: jenny
 """
+
+
+'''this scripts is used to generate numpy arrays for '''
+
 from pymatreader import read_mat
 import numpy as np
 import scipy.signal as signal
@@ -77,7 +81,7 @@ def get_TransGoodTrials(freq):
     return Data, Target, Target_rt, Target_rawrt
 
 # get raw fft data coral corrected
-Data30,Target,Target_rt, Target_rawrt = get_TransGoodTrials(30)
+Data30,Target,Target_rt, Target_rawrt =   (30)
 Data40,_,_ = get_TransGoodTrials(40)
 
 Dataraw = np.hstack((Data30,Data40))
@@ -135,17 +139,43 @@ np.save('/home/ramesh/pdmattention/ssvep/test/data_n200raw', Data)
 def get_N200bychanadapted():
     Data = np.empty((0, 500,119))
     path = '/home/ramesh/pdmattention/task3/'
+    TargetMatrix = read_mat(path + subID + 'task3_final.mat')['data'][1250:1750, rs_chans,:]
     for index, sub in enumerate(subIDs):
-        print(index, sub)
-        stimulus_ssvep, _, _, _, _, _, behav = SSVEP_task3(sub)
-        finalgoodtrials = stimulus_ssvep['goodtrials']
-        data = read_mat(path + subID + 'task3_final.mat')['data'][1250:1750, rs_chans,:]
+        if sub !='s239_ses1_':
+            print(index)
+            stimulus_ssvep, _, _, _, _, _, behav = SSVEP_task3(sub)
+            finalgoodtrials = stimulus_ssvep['goodtrials']
+            Source = read_mat(path + subID + 'task3_final.mat')['data'][1250:1750, rs_chans,:]
+            transfor = CORAL()
+            transfor.fit(Source, TargetMatrix)
+            Xs_trans = transfor.transfer(Source)  # adjusted source matrix
+            singletrial = Xs_trans[1250:1750, finalgoodtrials].T
+
         data = data[:,:,finalgoodtrials]
         mean = np.tile(np.mean(data, axis=0), [500, 1, 1])
         datanew = data - mean
         correct = behav['acc']
         data = np.transpose(data, (2, 0, 1))
         Data = np.vstack((Data, data))
+
+
+        if sub !='s239_ses1_':
+            print(index)
+            Source = read_mat(path + sub + 'N200.mat')['singletrial']
+            transfor = CORAL()
+            transfor.fit(Source, TargetMatrix)
+            Xs_trans = transfor.transfer(Source)  # adjusted source matrix
+            stimulus_ssvep, _, _, _, _, _, _ = SSVEP_task3(sub)
+            finalgoodtrials = stimulus_ssvep['goodtrials']
+            singletrial = Xs_trans[1250:1750, finalgoodtrials].T
+        else:
+            print(index)
+            Xs_trans = TargetMatrix
+            stimulus_ssvep, _, _, _, _, _, _ = SSVEP_task3(sub)
+            finalgoodtrials = stimulus_ssvep['goodtrials']
+            singletrial = Xs_trans[1250:1750, finalgoodtrials].T
+
+
 np.save('/home/ramesh/pdmattention/ssvep/test/data_n200raw', Data)
 
 
@@ -191,4 +221,7 @@ def get_unTransMatrix():
 
 np.save('/home/ramesh/pdmattention/ssvep/test/data_real', Data)
 
-
+# make a lowpass filter
+sr = 1000
+sos, w, h = timeop.makefiltersos(sr, 8, 10)
+erpfilt = signal.sosfiltfilt(sos, n200, axis=1, padtype='odd')

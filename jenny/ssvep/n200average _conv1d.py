@@ -34,11 +34,13 @@ class MyTrainingDataset(Dataset):
         self.transform = transform
         self.target_transform = target_transform
 
-        # self.data = np.expand_dims(np.load(self.root + '/data_n200adapted.npy'), axis=1)
-        self.data1 = np.expand_dims(np.load(self.root + '/data_twofreq.npy'), axis=1)
-        self.data2 = np.expand_dims(np.load(self.root + '/n200param.npy'), axis=1)
+        self.data = np.expand_dims(np.load(self.root + '/data_n200raw.npy')[:,0:500], axis=1)
+        # self.data = np.expand_dims(np.load(self.root + '/Data_freqs.npy'), axis=1)
+        # self.data2 = np.expand_dims(np.load(self.root + '/n200param.npy'), axis=1)
         # self.data3 = np.expand_dims(np.load(self.root + '/data_n200raw.npy'), axis=1)
-        self.data = np.dstack((self.data1, self.data2))
+        # self.data = np.dstack((self.data1, self.data2))
+        # self.data = np.concatenate((self.data1, self.data2), axis=1)
+
 
         # self.data3 = np.expand_dims(np.load(self.root + '/data_n200raw.npy'), axis=1)
         # self.data = np.dstack((self.data1, self.data2))
@@ -93,11 +95,13 @@ class MyTestingDataset(Dataset):
         # self.data3 = np.expand_dims(np.load(self.root + '/data_n200raw.npy'), axis=1)
         # self.data = np.dstack((self.data1, self.data2))
         self.targets = np.load(self.root + '/target.npy').astype(int)
-        # self.data = np.expand_dims(np.load(self.root + '/data_n200adapted.npy'), axis=1)
-        self.data1 = np.expand_dims(np.load(self.root + '/data_twofreq.npy'), axis=1)
-        self.data2 = np.expand_dims(np.load(self.root + '/n200param.npy'), axis=1)
+        self.data = np.expand_dims(np.load(self.root + '/data_n200raw.npy')[:,0:500], axis=1)
+
+        # self.data = np.expand_dims(np.load(self.root + '/Data_freqs.npy'), axis=1)
+        # self.data2 = np.expand_dims(np.load(self.root + '/n200param.npy'), axis=1)
         # self.data3 = np.expand_dims(np.load(self.root + '/data_n200raw.npy'), axis=1)
-        self.data = np.dstack((self.data1, self.data2))
+        # self.data = np.dstack((self.data1, self.data2))
+        # self.data = np.concatenate((self.data1, self.data2), axis=1)
 
         # self.incorrect_ind = np.where(self.targets == 0)[0]
         # self.correct_ind = np.where(self.targets == 1)[0]
@@ -152,12 +156,11 @@ class CNN1D(torch.nn.Module):
     def __init__(self):
         super(CNN1D, self).__init__()
         self.conv1 = torch.nn.Conv1d(1,6, kernel_size=4, stride=1)
-        self.conv2 = torch.nn.Conv1d(6, 12, 4, 1)
+        self.conv2 = torch.nn.Conv1d(6, 110, 4, 1)
         self.dropout1 = torch.nn.Dropout(p = .25)
         self.dropout2 = torch.nn.Dropout(p = 0.5)
         self.pool = torch.nn.MaxPool1d((2))
-        self.fc1 = torch.nn.Linear(1428,128)  #247
-        self.fc2 = torch.nn.Linear(128,2)
+        self.fc1 = torch.nn.Linear(27170,2)  #247
     def forward(self, x):
         x = torch.squeeze(x, axis=1)
         # x = torch.transpose(x, 1,2)
@@ -171,9 +174,9 @@ class CNN1D(torch.nn.Module):
         x = self.dropout1(x)
         x = torch.flatten(x, 1)
         x = self.fc1(x)
-        x = torch.relu(x)
-        x = self.dropout2(x)
-        x = self.fc2(x)
+        # x = torch.relu(x)
+        # x = self.dropout2(x)
+        # x = self.fc2(x)
         return x
 net = CNN1D().cuda()
 
@@ -208,7 +211,7 @@ train_accuracy = []
 test_accuracy = []
 train_precision = []
 test_precision = []
-for epoch in range(50):
+for epoch in range(300):
     net.train()  # training mode
     # for x, t in iter(test_loader):
     #     x=x.float()
@@ -258,5 +261,5 @@ plt.plot(train_precision, label = 'training precision')
 plt.plot(test_precision, label = 'testing precision')
 plt.plot()
 plt.legend(loc='best')
-plt.title('CNN1D using N200 ')
+plt.title('CNN1D using raw N200 time series average acrossed all channels (SVD)')
 

@@ -18,6 +18,7 @@ import numpy as np
 import pywt
 from scipy.signal import savgol_filter
 import os
+import numpy as np
 #import lab modules 
 #%%
 def choose_subs(lvlAnalysis, path):
@@ -56,9 +57,9 @@ def relativepower(spectrogram,baseline):
     relpower = np.zeros((nf,nt,nc,ntrial))
     for j in range(nf):
         for k in range(nc):
-            for l in range(ntrial)
-            baselinepower = np.mean(np.squeeze(spectrogram[j,baseline,k,l]))
-            relpower[j,:,k,l] = spectrogram[j,:,k,l]/baselinepower
+            for l in range(ntrial):
+                baselinepower = np.mean(np.squeeze(spectrogram[j,baseline,k,l]))
+                relpower[j,:,k,l] = spectrogram[j,:,k,l]/baselinepower
     return relpower
     
 #%%
@@ -78,9 +79,9 @@ medianrtbycond = np.zeros((3,ns))
 meanrt = np.zeros((3,ns))
 medianrt = np.zeros((3,ns))
 scount = 0
-x = loadmat('/home/ramesh/MNI_HEADMODEL/HNL128_Laplacian.mat')
-lap = x['lap']
-lapchan = x['goodchan'][0]
+# x = loadmat('/home/ramesh/MNI_HEADMODEL/HNL128_Laplacian.mat')
+# lap = x['lap']
+# lapchan = x['goodchan'][0]
 for subID in subIDs:
     print(subID)
     #extract variables needed 
@@ -93,13 +94,13 @@ for subID in subIDs:
     correct = data['correct']
     stimtime = data['stimulustime']
     time = data['time'] 
-#   compute surface Laplacian 
-    sgramlap= np.zeros((28,400,128,360))+1j*np.zeros((28,400,128,360))
-    for j in range(28):
-        for k in range(360):
-            fdata = np.squeeze(sgram[j,:,:,k])
-            fdata2 = fdata[:,lapchan.astype(int)]@np.transpose(lap)
-            sgramlap[j,:,:,k] = fdata2
+# #   compute surface Laplacian
+#     sgramlap= np.zeros((28,400,128,360))+1j*np.zeros((28,400,128,360))
+#     for j in range(28):
+#         for k in range(360):
+#             fdata = np.squeeze(sgram[j,:,:,k])
+#             fdata2 = fdata[:,lapchan.astype(int)]@np.transpose(lap)
+#             sgramlap[j,:,:,k] = fdata2
     #compute overall power measures
     allpower = np.abs(sgram[:,:,:,goodtrials])
     relpower = relativepower(allpower[:,:,np.arange(0,128,1),:],np.arange(75,125,1))    

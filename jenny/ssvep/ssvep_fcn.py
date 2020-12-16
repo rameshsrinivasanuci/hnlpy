@@ -34,25 +34,28 @@ class MyTrainingDataset(Dataset):
         self.transform = transform
         self.target_transform = target_transform
 
-        self.data1 = np.expand_dims(np.load(self.root + '/data_twofreq.npy'), axis=1)
-        self.data2 = np.expand_dims(np.load(self.root + '/n200param.npy'), axis=1)
+        self.data = np.expand_dims(np.load(self.root + '/data_n200adapted.npy'), axis=1)
+        # self.data2 = np.expand_dims(np.load(self.root + '/n200param.npy'), axis=1)
         # self.data3 = np.expand_dims(np.load(self.root + '/data_n200raw.npy'), axis=1)
-        self.data = np.dstack((self.data1, self.data2))
-        self.targets = np.load(self.root + '/target.npy').astype(int)
+        # self.data = np.dstack((self.data1, self.data2))
+        self.targets = np.load(self.root + '/target_rt.npy').astype(int)
         # oversampling the low acc data
         # self.data= np.dstack((self.data, self.data3))
         # self.data = self.data*(np.random.normal(0,100,(len(self.data),1,244)))
         # self.ind = np.load(self.root + '/dropout_acc.npy')
         # self.data = np.delete(self.data,self.ind, axis=0)
+        #
+        # # oversample the inaccurate trials
+        # self.incorrect_ind = np.where(self.targets == 0)[0]
+        # self.correct_ind = np.where(self.targets == 1)[0]
+        # self.testlist = list(islice(cycle(self.incorrect_ind), 6430))
+        # self.oversample = self.data[self.testlist,:,:]
+        # self.data = np.vstack((self.data, self.oversample))
+        # self.targets = np.hstack((self.targets, np.zeros(6430))).astype(int)
+        #
 
-        self.incorrect_ind = np.where(self.targets == 0)[0]
-        self.correct_ind = np.where(self.targets == 1)[0]
-        self.testlist = list(islice(cycle(self.incorrect_ind), 6430))
-        self.oversample = self.data[self.testlist,:,:]
-        self.data = np.vstack((self.data, self.oversample))
 
-
-        self.targets = np.hstack((self.targets, np.zeros(6430))).astype(int)
+        # self.targets = np.hstack((self.targets, np.zeros(6430))).astype(int)
 
 
 
@@ -85,18 +88,12 @@ class MyTestingDataset(Dataset):
         self.transform = transform
         self.target_transform = target_transform
 
-        self.data1 = np.expand_dims(np.load(self.root + '/data_twofreq.npy'), axis=1)
-        self.data2 = np.expand_dims(np.load(self.root + '/n200param.npy'), axis=1)
+        self.data = np.expand_dims(np.load(self.root + '/data_n200 adapted .npy'), axis=1)
+        # self.data2 = np.expand_dims(np.load(self.root + '/n200param.npy'), axis=1)
         # self.data3 = np.expand_dims(np.load(self.root + '/data_n200raw.npy'), axis=1)
-        self.data = np.dstack((self.data1, self.data2))
-        self.targets = np.load(self.root + '/target.npy').astype(int)
+        # self.data = np.dstack((self.data1, self.data2))
+        self.targets = np.load(self.root + '/target_rt.npy').astype(int)
 
-
-        # self.incorrect_ind = np.where(self.targets == 0)[0]
-        # self.correct_ind = np.where(self.targets == 1)[0]
-        # self.testlist = list(islice(cycle(self.incorrect_ind), 6430))
-        # self.oversample = self.data[self.testlist,:,:]
-        # self.data = np.vstack((self.data, self.oversample))
 
 
 
@@ -160,10 +157,10 @@ data.shape
 class net(torch.nn.Module):
     def __init__(self):
         super(net, self).__init__()
-        self.fc1 = torch.nn.Linear(244,600)
+        self.fc1 = torch.nn.Linear(242,600)
         self.dropout = torch.nn.Dropout(p = .5)
         self.fc2 = torch.nn.Linear(600,600)
-        self.fc3 = torch.nn.Linear(600,2)
+        self.fc3 = torch.nn.Linear(600,3)
     def forward(self, x):
         x = self.fc1(x)
         x = torch.relu(x)
@@ -192,12 +189,12 @@ def train_step(x, t, net, opt_fn, loss_fn):
 
 x,t = next(iter(train_loader))
 x = x.float()
-loss_ = train_step(x.view(-1,244), t, net, opt, mse_loss)
+loss_ = train_step(x.view(-1,242), t, net, opt, mse_loss)
 
 # make prediction
 x,t = next(iter(test_loader))
 x = x.float()
-y = net(x.view(-1,244).cuda())
+y = net(x.view(-1,242).cuda())
 # model_arch = make_dot(y.mean(), params = dict(net.named_parameters())
 # Source(model_arch).render(root)
 # make_dot(y, params=dict(list(net.named_parameters()))).render("rnn_torchviz", format="png")
@@ -214,7 +211,7 @@ test_accuracy = []
 train_precision = []
 test_precision = []
 
-for epoch in range(200):
+for epoch in range(100):
     net.train()  # training mode
     # for x, t in iter(test_loader):
     #     x=x.float()
@@ -224,8 +221,8 @@ for epoch in range(200):
     prc_batch = []
     for x, t in iter(train_loader):
         x = x.float()
-        loss_ = train_step(x.view(-1, 244), t, net, opt, mse_loss)
-        y = net(x.view(-1, 244).cuda())
+        loss_ = train_step(x.view(-1, 242), t, net, opt, mse_loss)
+        y = net(x.view(-1, 242).cuda())
         batch_accuracy = torch.mean((t.cuda() == y.argmax(1).cuda()).float())
         tp = torch.sum(torch.logical_and(t.cuda() == y.argmax(1).cuda(), t.cuda() ==1).float())
         fp = torch.sum(torch.logical_and(y.argmax(1).cuda()==1, t.cuda() ==0).float())
@@ -243,7 +240,7 @@ for epoch in range(200):
     net.eval()  # evaluation mode
     for x, t in iter(test_loader):
         x = x.float()
-        y = net(x.view(-1, 244).cuda())  # This is necessary because the data has shape [1,28,28], but the input layer is [784]
+        y = net(x.view(-1, 242).cuda())  # This is necessary because the data has shape [1,28,28], but the input layer is [784]
         batch_accuracy = torch.mean((t.cuda() == y.argmax(1).cuda()).float())
         tp = torch.sum(torch.logical_and(t.cuda() == y.argmax(1).cuda(), t.cuda() ==1).float())
         fp = torch.sum(torch.logical_and(y.argmax(1).cuda()==1, t.cuda() ==0).float())
@@ -259,11 +256,11 @@ for epoch in range(200):
 plt.figure()
 plt.plot(train_accuracy, ls = '--', label = 'training accuracy')
 plt.plot(test_accuracy, ls = '--',label = 'testinging accuracy')
-plt.plot(train_precision, label = 'training precision')
-plt.plot(test_precision, label = 'testing precision')
+# plt.plot(train_precision, label = 'training precision')
+# plt.plot(test_precision, label = 'testing precision')
 plt.plot()
 plt.legend(loc='best')
-plt.title('two-layer FCN using even training set')
+plt.title('two-layer FCN using 242 features on RT')
 
 
 

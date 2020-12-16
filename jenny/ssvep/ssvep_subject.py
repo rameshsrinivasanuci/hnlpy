@@ -146,6 +146,7 @@ def getSSVEP(data,sr,window,ssvep_freq,goodtrials,goodchans):
     trialestimate = np.zeros((endsamp-startsamp,ntrial),dtype=complex)
     trial_bychan = np.zeros((endsamp-startsamp,nchan, ntrial), dtype = complex)
     trial_fft = np.zeros((endsamp-startsamp,nchan, ntrial), dtype = complex)
+    trial_data = np.zeros((endsamp-startsamp,nchan, ntrial))
 
     for trial in goodtrials: 
         trialdata = np.squeeze(data[startsamp:endsamp,:,trial])
@@ -155,6 +156,7 @@ def getSSVEP(data,sr,window,ssvep_freq,goodtrials,goodchans):
         trial_bychan[:,:,trial] = trialfft_weighted
         trial_fft[:, :, trial] = trialfft
         trialestimate[:,trial] = trialproject[:,0] #new coefficients
+        trial_data[:,:,trial] = trialdata
 
 
     SSVEP['goodtrials'] = goodtrials
@@ -174,6 +176,7 @@ def getSSVEP(data,sr,window,ssvep_freq,goodtrials,goodchans):
     SSVEP['singular'] = np.diag(s)
     SSVEP['trial_bychan'] = trial_bychan
     SSVEP['trialfft'] = trial_fft
+    SSVEP['trialdata'] = trial_data
     return SSVEP
     
 
@@ -204,7 +207,10 @@ def SSVEP_task3(subID):
 
     # choosing the trials that have RT over 300ms and check if they are all goodtrials
     # get the index and apply to rt, condition and accuracy
+    xy, x_ind, y_ind = np.intersect1d(beh_ind, goodtrials, return_indices=True)
     ind, finalgoodtrials = np.array(compListsInd(beh_ind, goodtrials))
+    # here the ind stands for ind in beh_ind that are qualified as goodtrials
+    # finalgoodtrials stand for the actual trial index from the original unsorted dataset
     rt_final = rt[ind]
     acc_final = correct[ind]
     behav_final = {'rt': rt_final, 'acc': acc_final}
