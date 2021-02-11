@@ -19,6 +19,7 @@ from scipy.fftpack import fft
 from scipy import signal
 import os
 from transfertools.models import TCA, CORAL
+import matplotlib.patches as mpatches
 # import lab modules
 import timeop
 from ssvep_subject import *
@@ -27,18 +28,87 @@ path = ('/home/jenny/pdmattention/')
 
 # getting the behav subject info and parameter estimates
 alphadc_info = read_mat(path +'DecisionChronometrics/Data/modelfits/behavior_task3_Dec_15_20_13_21.mat' )
-alphadc_est = read_mat(path + 'DecisionChronometrics/Data/modelfits/behavior_task3_HDDM_AlphaDCDec_10_20_10_11_estimates.mat')
+alphadc_est = read_mat(path + 'ssvep/behavior2_task3_HDDM_DCDec_18_20_18_19_estimates.mat')
+
 
 subIDs = alphadc_info['uniquepart']
+subIDs = np.delete(subIDs, 3)
 subIDs = ['s' + str(i) for i in subIDs]
 fullIDs = choose_subs(1, path + 'task3')
-fullIDs.append('s185_ses2_')
+# fullIDs.append('s185_ses2_')
 fullIDs.remove('s236_ses1_')
 fullIDs.sort()
-check = all([True for i, j in enumerate(fullIDs) if str(j)[0:4] == subIDs[i]])
-while check:
+check = all([True if str(j)[0:4] == subIDs[i] else False for i, j in enumerate(fullIDs)])
+if check:
     print('subIDs matched')
-    check = False
+else:
+    print('Warning: subID not matched!')
+
+# run original model where delta is fixed
+model1delta = np.zeros((len(subIDs),3), dtype=float)
+for i in range(0,33):
+    sub = subIDs[i]
+    delta = read_mat('/home/mariel/Documents/Projects2/subs_genparam/' + sub + 'diags.mat' )['delta']['mean']
+    model1delta[i,:] = delta
+
+
+
+# plots
+
+Signal30 = np.load('/home/jenny/pdmattention/ssvep/block_hddm/Signal30.npy')
+Signal40 = np.load('/home/jenny/pdmattention/ssvep/block_hddm/Signal40.npy')
+Signal30[Signal30[:,2] ==4, 2] = np.ones(1961);
+Signal30[Signal30[:,2] ==5, 2] = 2 * np.ones(1961);
+Signal30[Signal30[:,2] ==6, 2] = 3 * np.ones(1968);
+
+cond = ['cond1','cond2','cond3']
+color = ['b','g','r']
+marker = ['^','*','o']
+
+power30_sub = np.zeros((npart,3), dtype=float)
+for i in range(0,npart):
+    sub = uniquepart[i]
+    subdata = Signal30[list(np.where(Signal30[:, 3] == sub)[0]), :]
+    for j in range(0,3):
+        power30_sub [i,j] = np.mean(subdata[list(np.where(subdata[:,2] == j+1)[0]),1])
+
+for i in range(0,npart):
+    for j in range(0,3):
+        plt.scatter(deltanew[i,j],np.log(power30_sub[i,j]), color = color[j],\
+        marker = marker[j], s = 50)
+plt.title('Power at 30Hz (fixed alpha)')
+plt.xlabel('Delta')
+plt.ylabel('Log of Power')
+
+easy = mlines.Line2D([], [],color = 'b',marker='^', label = 'easy')
+medium = mlines.Line2D([], [],color = 'g', marker='*',label = 'medium')
+hard = mlines.Line2D([], [],color = 'r', marker='o',label = 'hard')
+plt.legend(handles=[easy, medium, hard])
+
+
+
+cond = ['cond1','cond2','cond3']
+color = ['b','g','r']
+marker = ['^','*','o']
+for i in range(0,3):
+    plt.scatter(model1delta[i], np.squeeze(power40)[i], color = color[i], label = cond[i],\
+    marker = marker[i], s = 50)
+
+plt.title('Power at 40Hz')
+plt.xlabel('SNR')
+plt.ylabel('Varsig')
+plt.legend(loc='best')
+
+plt.scatter(varsigmahier['mean'],np.squeeze(power30), color='r', marker = 'o', lable='block1')
+
+# compared with fixed alpha data
+deltanew = np.zeros((33,3), dtype=float)
+delta = alphadc_est['delta']
+delta = delta['mean']
+deltanew[:,0] = 0.5*(delta[:,0] + delta[:,3])
+deltanew[:,1] = 0.5*(delta[:,1] + delta[:,4])
+deltanew[:,2] = 0.5*(delta[:,2] + delta[:,5])
+
 
 
 # subID =  's239_ses1_'    # use this subject for CORAL
@@ -47,25 +117,55 @@ pca = read_mat('/home/jenny/pdmattention/task3/pcamodel_zscore/s181_ses1_pcamode
 rs_chans = pca['goodchannels']
 
 
-###
+Signal30 = np.load('/home/jenny/pdmattention/ssvep/block_hddm/Signal30.npy')
+Signal40 = np.load('/home/jenny/pdmattention/ssvep/block_hddm/Signal40.npy')
 
-def get_ssvepAll(freq1,freq2):
+
+
+#
+
+
+
+
+
+
+###
+# get rid of sub185
+
+fullIDs.remove('s185_ses2_')
+
+Signal30, Signal40 = get_ssvepAll(30,40, fullIDs)
+np.save('/home/ramesh/pdmattention/ssvep/block_hddm/Signal30', Signal30)
+np.save('/home/ramesh/pdmattention/ssvep/block_hddm/Signal40', Signal40)
+
+
+# get the data
+
+
+
+def get_ssvepAll(freq1,freq2, subIDs):
     """this function get SSVEPs by 30 and 40 Hz for all
     freq1 is the power we want to extract from the ssvep maximizing 30Hz
     freq2 is the power we want to extract from the ssvep maximizing 40Hz"""
     path = '/home/ramesh/pdmattention/task3/'
     Signal30 = np.empty((0,4))
-    Signal30 = np.empty((0,4))
+    Signal40 = np.empty((0,4))
+    Signal40 = np.empty((0,4))
     for index, sub in enumerate(subIDs):
         print(index)
+        print(sub)
         if sub == 's185_ses2_':
-            stimulus_ssvep, noise_ssvep, behavdict = SSVEP_185(subID)
-            datadict = read_mat(path + subID + 'task3_cleaned.mat')
+            stimulus_ssvep, noise_ssvep, behavdict = SSVEP_185(sub)
+            datadict = read_mat(path + sub + 'task3_cleaned.mat')
+            condition = datadict['expinfo']['condition']
         else:
-            stimulus_ssvep, noise_ssvep, _, behavdict, behavfinal = SSVEP_task3All(subID)
-            condition = read_mat(path + subID + 'task3_expinfo.mat')['condition']
-            datadict  = read_mat(path  + subID + 'task3_final.mat')
-        artifact = datadict['artifact']
+            stimulus_ssvep, noise_ssvep,behavdict, behavfinal = SSVEP_task3All(sub)
+            condition = read_mat(path + sub + 'task3_expinfo.mat')['condition']
+            datadict  = read_mat(path  + sub + 'task3_final.mat')
+        thevars = np.var(datadict['data'], axis=0)
+        artifact = thevars == 0 | np.isnan(thevars)
+        if 'artifact' in datadict:
+            artifact = datadict['artifact'] | artifact
         nchans = datadict['data'].shape[1]
         ntrials = datadict['data'].shape[2]
         artifacttrials = sum(artifact) == nchans
@@ -90,7 +190,7 @@ def get_ssvepAll(freq1,freq2):
 
         condition = condition[goodtrials[0]]
         nt = len(goodtrials[0])
-        true_participant =np.tile(int(subID[1:4]), (1, nt))
+        true_participant =np.tile(int(sub[1:4]), (1, nt))
         trialdata30 = np.zeros((nt, 4),  dtype=float)
         trialdata40 = np.zeros((nt, 4),  dtype=float)
         trialdata30 = np.vstack((snr30,signal_power30, condition, np.squeeze(true_participant))).T
@@ -98,30 +198,14 @@ def get_ssvepAll(freq1,freq2):
 
         Signal30 = np.vstack((Signal30, trialdata30))
         Signal40 = np.vstack((Signal40, trialdata40))
-
-
-
-
-    Target = []
-    Data = np.empty((0,242))
-    Target_rt = []
-    Target_rawrt =[]
-    for index, sub in enumerate(subIDs):
-        print(index)
-        StimSnr30, finalgoodtrials, acc, rt, rt_class = trial_ssvep(sub, 30)
-        StimSnr40, _, _, _, _ = trial_ssvep(sub, 40)
-        StimSnrall = np.hstack((StimSnr30.T, StimSnr40.T))
-        StimSnrall = StimSnrall[finalgoodtrials,:]
-        Data = np.vstack((Data, StimSnrall))
-        Target = np.append(Target, acc)
-        Target_rt = np.append(Target_rt, rt_class)
-        Target_rawrt = np.append(Target_rt, rt)
+    return Signal30, Signal40
 
 
 def SSVEP_task3All(subID):
+    path = '/home/ramesh/pdmattention/task3/'
     currentSub = subID[0:4]
     print('Current Subject: ', currentSub)
-    pcdict = read_mat(path + subID + 'task3_photocells.mat')
+    # pcdict = read_mat(path + subID + 'task3_photocells.mat')
     datadict = read_mat(path + subID + 'task3_final.mat')
     behavdict = read_mat(path + subID[0:5] + 'behavior_final.mat')
 
@@ -175,13 +259,14 @@ def SSVEP_task3All(subID):
     # stim_erpf = np.dstack((stim_ez['erp_fft'], stim_md['erp_fft'], stim_hr['erp_fft']))
     # noise_erpf = np.dstack((noise_ez['erp_fft'], noise_md['erp_fft'], noise_hr['erp_fft']))
 
-    return stimulus_ssvep, noise_ssvep, photocell, behavdict, behav_final
+    return stimulus_ssvep, noise_ssvep, behavdict, behav_final
 
 
 
 
 
 def SSVEP_185(subID):
+    path = '/home/ramesh/pdmattention/task3/'
     currentSub = subID[0:4]
     print('Current Subject: ', currentSub)
     datadict = read_mat(path  + subID + 'task3_cleaned.mat')
@@ -236,3 +321,97 @@ def SSVEP_185(subID):
     # noise_erpf = np.dstack((noise_ez['erp_fft'], noise_md['erp_fft'], noise_hr['erp_fft']))
 
     return stimulus_ssvep, noise_ssvep, behavdict
+
+
+
+
+
+# plots
+
+Signal30 = np.load('/home/jenny/pdmattention/ssvep/block_hddm/Signal30.npy')
+Signal40 = np.load('/home/jenny/pdmattention/ssvep/block_hddm/Signal40.npy')
+
+
+
+cond = ['cond1','cond2','cond3','cond4','cond5','cond6']
+color = ['b','g','r','c','m','y']
+marker = ['^','*','o', '^','*','o']
+for i in range(0,6):
+    plt.scatter(varsigmahier['mean'][i], np.squeeze(power40)[i], color = color[i], label = cond[i],\
+    marker = marker[i], s = 50)
+
+plt.title('Power at 40Hz')
+plt.xlabel('SNR')
+plt.ylabel('Varsig')
+plt.legend(loc='best')
+
+plt.scatter(varsigmahier['mean'],np.squeeze(power30), color='r', marker = 'o', lable='block1')
+
+
+############################ by subject ######################################
+varsigma = alphadc_est['varsigma']
+ndt = alphadc_est['ndt']
+true_participant = alphadc_info['true_participant']
+uniquepart = alphadc_info['uniquepart']
+uniquepart = np.delete(uniquepart, 3, 0)
+delta = alphadc_est['delta']
+npart =len(uniquepart)
+
+
+cond = ['cond1','cond2','cond3','cond4','cond5','cond6']
+color = ['b','g','r','c','m','y']
+marker = ['^','*','o', '^','*','o']
+power40_sub = np.zeros((npart,6), dtype=float)
+for i in range(0,npart):
+    sub = uniquepart[i]
+    subdata = Signal30[list(np.where(Signal30[:, 3] == sub)[0]), :]
+    for j in range(0,6):
+        power40_sub [i,j] = np.mean(subdata[list(np.where(subdata[:,2] == j+1)[0]),0])
+
+for i in range(0,npart):
+    for j in range(0,6):
+        plt.scatter(ndt['mean'][i,j],np.log(power40_sub[i,j]), color = color[j],\
+        marker = marker[j], s = 50)
+plt.title('SNR at 30Hz (fixed Alpha)')
+plt.xlabel('NDT')
+plt.ylabel('Log of snr')
+plt.legend(loc='best')
+
+
+
+for i in range(0,6):
+    plt.scatter(varsigmahier['mean'][i], np.squeeze(power40)[i], color = color[i], label = cond[i],\
+    marker = marker[i], s = 50)
+
+plt.title('Power at 40Hz')
+plt.xlabel('SNR')
+plt.ylabel('Varsig')
+plt.legend(loc='best')
+
+plt.scatter(varsigmahier['mean'],np.squeeze(power30), color='r', marker = 'o', lable='block1')
+
+
+snr30 = np.zeros((1,6), dtype=float)
+snr30[0,0] = np.mean(Signal30[list(np.where(Signal30[:,2] == 1)[0]),0])
+snr30[0,1] = np.mean(Signal30[list(np.where(Signal30[:,2] == 2)[0]),0])
+snr30[0,2] = np.mean(Signal30[list(np.where(Signal30[:,2] == 3)[0]),0])
+snr30[0,3] =np.mean(Signal30[list(np.where(Signal30[:,2] == 4)[0]),0])
+snr30[0,4] =np.mean(Signal30[list(np.where(Signal30[:,2] == 5)[0]),0])
+snr30[0,5] =np.mean(Signal30[list(np.where(Signal30[:,2] == 6)[0]),0])
+
+
+snr40 = np.zeros((1,6), dtype=float)
+snr40[0,0] = np.mean(Signal40[list(np.where(Signal40[:,2] == 1)[0]),0])
+snr40[0,1] = np.mean(Signal40[list(np.where(Signal40[:,2] == 2)[0]),0])
+snr40[0,2] = np.mean(Signal40[list(np.where(Signal40[:,2] == 3)[0]),0])
+snr40[0,3] =np.mean(Signal40[list(np.where(Signal40[:,2] == 4)[0]),0])
+snr40[0,4] =np.mean(Signal40[list(np.where(Signal40[:,2] == 5)[0]),0])
+snr40[0,5] =np.mean(Signal40[list(np.where(Signal40[:,2] == 6)[0]),0])
+
+power40 = np.zeros((1,6), dtype=float)
+power40[0,0] = np.mean(Signal40[list(np.where(Signal40[:,2] == 1)[0]),1])
+power40[0,1] = np.mean(Signal40[list(np.where(Signal40[:,2] == 2)[0]),1])
+power40[0,2] = np.mean(Signal40[list(np.where(Signal40[:,2] == 3)[0]),1])
+power40[0,3] =np.mean(Signal40[list(np.where(Signal40[:,2] == 4)[0]),1])
+power40[0,4] =np.mean(Signal40[list(np.where(Signal40[:,2] == 5)[0]),1])
+power40[0,5] =np.mean(Signal40[list(np.where(Signal40[:,2] == 6)[0]),1])
