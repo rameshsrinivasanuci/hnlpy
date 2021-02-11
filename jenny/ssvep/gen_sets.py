@@ -7,6 +7,8 @@ Created on Sun May 10 16:05:45 2020
 """
 
 
+
+
 '''this scripts is used to generate numpy arrays for '''
 
 from pymatreader import read_mat
@@ -219,7 +221,34 @@ def get_unTransMatrix():
         Target_rt = np.append(Target_rt, rt_class)
         Target_rawrt = np.append(Target_rt, rt)
 
-np.save('/home/ramesh/pdmattention/ssvep/test/data_real', Data)
+def get_unTransMatrix():
+    Target = []
+    Data = np.empty((0,242))
+    Target_rt = []
+    Target_rawrt =[]
+    for index, sub in enumerate(subIDs):
+        print(index)
+        StimSnr30, finalgoodtrials, acc, rt, rt_class = trial_ssvep(sub, 30)
+        StimSnr40, _, _, _, _ = trial_ssvep(sub, 40)
+        StimSnrall = np.hstack((StimSnr30.T, StimSnr40.T))
+        StimSnrall = StimSnrall[finalgoodtrials,:]
+        Data = np.vstack((Data, StimSnrall))
+        Target = np.append(Target, acc)
+        Target_rt = np.append(Target_rt, rt_class)
+        Target_rawrt = np.append(Target_rt, rt)
+
+### get rawRT
+def get_unTransMatrix():
+    Target_rawrt =[]
+    for index, sub in enumerate(subIDs):
+        print(index)
+        _, _, _, _, _, _, behav_final = SSVEP_task3(sub)
+        rt = behav_final['rt']
+        Target_rawrt = np.append(Target_rawrt, rt)
+
+
+
+np.save('/home/ramesh/pdmattention/ssvep/test/target_rawrt', Target_rawrt)
 
 # make a lowpass filter
 sr = 1000

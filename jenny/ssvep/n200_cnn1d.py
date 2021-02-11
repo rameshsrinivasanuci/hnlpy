@@ -116,7 +116,7 @@ data.shape
 class CNN1D(torch.nn.Module):
     def __init__(self):
         super(CNN1D, self).__init__()
-        self.conv1 = torch.nn.Conv1d(119,300, kernel_size=2, stride=1)
+        self.conv1 = torch.nn.Conv1d(2,300, kernel_size=2, stride=1)
         self.conv2 = torch.nn.Conv1d(300, 110, 4, 1)
         self.dropout1 = torch.nn.Dropout(p = .25)
         self.dropout2 = torch.nn.Dropout(p = 0.5)

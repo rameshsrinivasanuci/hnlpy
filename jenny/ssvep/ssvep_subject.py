@@ -33,7 +33,7 @@ def trial_ssvep(subID, freq):
     '''this function returns the power and snr of single trials
     when frequency is 30 and 40 for all conditions'''
     stimulus_ssvep, noise_ssvep, photocell, _, _, _, behav_final = SSVEP_task3(subID)
-    stim_estimate = stimulus_ssvep['trial_bychan']
+    stim_estimate = stimulus_ssvep['singletrial']
     valid_chans = np.where(stimulus_ssvep['erp_fft'][0,] != 0)
     if len(valid_chans[0]) != 121:
         print('WARNING: %i channels with 0s detected, using the defalt 121 channels'% len(valid_chans[0]))
@@ -53,7 +53,7 @@ def trial_ssvep(subID, freq):
 
 def subject_average(subID):
     '''this function returns the power and snr when frequency is 30 and 40 for all conditions'''
-    stimulus_ssvep, noise_ssvep, photocell, behavdict, _, _, _ = SSVEP_task3(subID)
+    stimulus_ssvep, noise_ssvep, _, behavdict, _, _, behavfinal = SSVEP_task3(subID)
     StimSnr, StimPower = get_power(stimulus_ssvep, behavdict, 30)
     NoiseSnr, NoisePower = get_power(stimulus_ssvep, behavdict, 40)
     pc_chans = np.where(StimSnr == 0)
@@ -122,7 +122,7 @@ def getSSVEP(data,sr,window,ssvep_freq,goodtrials,goodchans):
     #take fft over prescribed window
     erpf = fft(erp[startsamp:endsamp, :], axis=0)/(endsamp-startsamp) # raw fft     
     binwidth = int((endsamp-startsamp)/sr)
-    u,s,vh = linalg.svd(erpf[(ssvep_freq-1)*binwidth:(ssvep_freq+1)*binwidth+1,:])
+    u,s,vh = linalg.svd(erpf[(ssvep_freq-1)*binwidth:(ssvep_freq+1)*binwidth+1,goodchans])
     snr = 2 * (np.abs(u[1,:]**2))/(np.abs(u[0,:])**2 + np.abs(u[2,:])**2)
 
     snrflagsignal = 1
@@ -133,12 +133,13 @@ def getSSVEP(data,sr,window,ssvep_freq,goodtrials,goodchans):
     weights = np.zeros((nchan,1),dtype=complex)
 
 	# This is an optimal set of weights to estimate 30 hz signal. 
-    weights[:,0] = np.matrix.transpose(vh[0,:])
+    weights[goodchans,0] = np.matrix.transpose(vh[0,:])
 
 	# lets test it on the same interval using weighted electrode vs. original
     erpproject = np.matmul(erpf, weights)
 
     # multiply the weights for all timepoints
+    weights = weights *np.diag(s)[0,0]
     weights_long = np.tile(weights * np.diag(s)[0,0], [1,1000])
     channel_power = np.transpose(erpf) * weights_long
 
@@ -147,6 +148,8 @@ def getSSVEP(data,sr,window,ssvep_freq,goodtrials,goodchans):
     trial_bychan = np.zeros((endsamp-startsamp,nchan, ntrial), dtype = complex)
     trial_fft = np.zeros((endsamp-startsamp,nchan, ntrial), dtype = complex)
     trial_data = np.zeros((endsamp-startsamp,nchan, ntrial))
+    trial_allchan = np.zeros((endsamp-startsamp,ntrial), dtype = complex)
+
 
     for trial in goodtrials: 
         trialdata = np.squeeze(data[startsamp:endsamp,:,trial])
@@ -157,7 +160,7 @@ def getSSVEP(data,sr,window,ssvep_freq,goodtrials,goodchans):
         trial_fft[:, :, trial] = trialfft
         trialestimate[:,trial] = trialproject[:,0] #new coefficients
         trial_data[:,:,trial] = trialdata
-
+        trial_allchan[:,trial] = np.squeeze(trialfft @ weights)
 
     SSVEP['goodtrials'] = goodtrials
     SSVEP['goodchannels'] = goodchans
@@ -177,6 +180,7 @@ def getSSVEP(data,sr,window,ssvep_freq,goodtrials,goodchans):
     SSVEP['trial_bychan'] = trial_bychan
     SSVEP['trialfft'] = trial_fft
     SSVEP['trialdata'] = trial_data
+    SSVEP['trial_allchan'] = trial_allchan  # this gives out single spectral power for each trial
     return SSVEP
     
 
