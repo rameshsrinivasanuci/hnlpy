@@ -20,145 +20,283 @@ from scipy import signal
 import os
 from pymatreader import read_mat
 from hdf5storage import savemat
-from hdf5storage import loadmat
 #%%
 # import lab modules
 import timeop
 from ssvep_subject import *
+from readchans import *
 
 path = '/home/jenny/pdmattention/'
 subIDs = choose_subs(1, path + 'task3')
 subIDs.remove('s236_ses1_')
 
 
+def freqbands():
+    theta = [3,4,5]
+    lowalpha = [7,8,9]
+    highalpha = [11,12,13]
+    lowtheta = [15,16,17,18,19,20,21]
+    hightheta = [23,24,25,26,27,28,29]
+    bandnames = ['theta', 'lowalpha', 'highalpha', 'lowtheta','hightheta']
+    bandlist = [theta, lowalpha, highalpha, lowtheta,hightheta]
+    return bandlist, bandnames
 
-subject_bycond= np.zeros((len(subIDs),400,3,4))
-subject_rt = np.zeros((len(subIDs),400,3,4))
-
-count = 0
-for sub in subIDs:
-    conditionpower, rtpower=alphadc(sub)
-    subject_bycond[count,:,:,:]=conditionpower
-    subject_rt[count,:,:,:]=rtpower
-    count +=1
-
-
-
-def alphadc(subID):
-    '''this code get '''
-    basef, bl_low, bl_alphalow, bl_alphaligh,bl_high = baselinefreq(subID)
+def alphadc(subID, allchan=True, channame=None):
+    '''channame would be 'out.lc' as an example'''
+    path = '/home/jenny/pdmattention/'
+    _, bl_theta, bl_alphaLow, bl_alphaHigh, bl_betaLow, bl_betaHigh = baselinefreq(subID, 0, 250)
     spec = loadmat(path + 'task3/'+'spectrogram/' + subID + 'spectrogram.mat')
-    frequencies=spec['frequencies']
+    frequencies=spec['frequencies'].astype(int)
     condition = spec['condition']
     correct = spec['correct']
-    goodchans = spec['goodchannels']
+    if allchan is True:
+        goodchans = spec['goodchannels']
+    if allchan is False:
+        goodchannels = spec['goodchannels']
+        chandict = getchans()
+        groupchans = chandict[channame]
+        goodchans = [i for i in groupchans if i in goodchannels]
+        print("%s:" % channame, "%s" % goodchans)
+    print("goodchans: %d" % len(goodchans))
     goodtrials = spec['goodtrials']
     rt = spec['rt']
     sgram = spec['spectrogram']
-    ind1, ind2, ind3, ind4 = frequencies.tolist().index(2), frequencies.tolist().index(6), frequencies.tolist().index(10), frequencies.tolist().index(20)
-    ind = np.arange(ind1,ind1+3), np.arange(ind2,ind2+5),np.arange(ind3, ind3+4), np.arange(ind4, ind4+10)
     nt = sgram.shape[1]
+    ncond = len(np.unique(condition))
+    nchan = len(goodchans)
+    bandlist, bandnames = freqbands()
+    nband = len(bandlist)
+    freqind = []
+    for l in bandlist:
+        ind = [i for i, j in enumerate(frequencies) if j in l]
+        freqind.append(ind)
 
-    conditionpower = np.zeros((nt,3,4))
-    baseline = bl_low[goodchans,:], bl_alphalow[goodchans,:], bl_alphaligh[goodchans,:], bl_high[goodchans,:]
-    for k in range(3):
+    baseline = bl_theta, bl_alphaLow, bl_alphaHigh, \
+                bl_betaLow, bl_betaHigh
+    baseline = np.array(baseline)
+
+    # baseline correction
+    alphaDC = np.zeros((nband, nt, 129, 360))
+    for t in range(0,360):
+        for c in range(0,128):
+            #this is the power of each electrode of each trial
+            chansgram = sgram[:,:,c,t]
+            chanbl = baseline[:,c,t]
+            for i in range(nband):
+                relativepower = np.abs(chansgram[freqind[i],:])**2 / chanbl[i]
+                relativepower = np.mean(relativepower, axis=0) # this is per electrode per trial per frequency band
+
+                alphaDC[i,:,c,t] = relativepower
+    # np.save(path +'/alphaDC' + '/desynch_%s'% subID[0:5], alphaDC)
+    alpha2 = alphaDC[:,:,goodchans,:]
+
+    alpha3 = alpha2[:,:,:,goodtrials]
+
+    # by condition
+    conditionpower = np.zeros((nt, ncond, nband))
+    for k in range(ncond):
         trials = np.intersect1d(np.where(condition == k+1)[0],goodtrials)
-        for band in range(0,4):
-            condpower =np.mean(np.abs(sgram[:, :, :, trials]**2), axis=3)
-            condpower = np.mean(condpower[ind[band].tolist(),:], axis=0)
-            condpower = np.mean(condpower, axis=1)
-            bl = np.mean(baseline[band][:,trials], axis=(0,1))
-            conditionpower[:,k,band]=condpower/bl
+        alpha = np.mean(alpha2[:,:,:,trials], axis=(2,3))
+        conditionpower[:,k,:] = alpha.T
 
-    rtpower = np.zeros((nt,3,4))
+    # by RT
+    rtpower = np.zeros((nt, ncond, nband))
     for k in range(3):
-        trials = [i for i in goodtrials if i in np.arange(120*k,120*k+120,1)]
-        for band in range(0,4):
-            rtp =np.mean(np.abs(sgram[:, :, :, trials]**2), axis=3)
-            rtp = np.mean(rtp[ind[band].tolist(),:], axis=0)
-            rtp = np.mean(rtp, axis=1)
-            bl = np.mean(baseline[band][:,trials], axis=(0,1))
-            rtpower[:,k,band]=rtp/bl
-    return conditionpower, rtpower
+        npercond = np.floor(len(goodtrials)/3)
+        trials = [j for i, j in enumerate(goodtrials) if i in np.arange(npercond*k,npercond*k+npercond,1)]
+        alpha = np.mean(alpha2[:,:,:,trials], axis=(2,3))
+        rtpower[:, k, :] = alpha.T
+
+    # by accruacy
+    accpower = np.zeros((nt,2,nband))
+    for k in range(0,2):
+        trials = np.intersect1d(np.where(correct == k)[0], goodtrials)
+        alpha = np.mean(alpha2[:,:,:,trials], axis=(2,3))
+        accpower[:,k,:] = alpha.T
+
+    # by four condition
+    accrtpower = np.zeros((nt,4,nband))
+    nhalf = np.floor(len(goodtrials)/2)
+    fasttrials = goodtrials[0:int(nhalf)]
+    slowtrials = goodtrials[int(nhalf):]
+    for k in range(0,2):
+        trials = np.intersect1d(np.where(correct == k)[0], fasttrials)
+        alpha = np.mean(alpha2[:,:,:,trials], axis=(2,3))
+        accrtpower[:,k,:] = alpha.T
+    for k in range(0, 2):
+        trials = np.intersect1d(np.where(correct == k)[0], slowtrials)
+        alpha = np.mean(alpha2[:, :, :, trials], axis=(2, 3))
+        accrtpower[:, k+2, :] = alpha.T
+
+    return alphaDC, conditionpower,rtpower, accpower, accrtpower
+
+    # return conditionpower, rtpower
 
 
 
 
-def baselinefreq(subID):
-    '''this function returns raw fft coeficient for the baseline, and the power at 4Hz, 8Hz and 12Hz at each channel for each trial'''
+def baselinefreq(subID, tstart,tend):
+    '''this function returns raw fft coeficient for the baseline, and the power at 4Hz, 8Hz, 12Hz, 16&20, 24&28 at each channel for each trial
+    tstart is where the baseline starts'''
     path = '/home/jenny/pdmattention/task3/'
     currentSub = subID[0:4]
     print('Current Subject: ', currentSub)
     datadict = read_mat(path + subID + 'task3_final.mat')
-
     data = np.array(datadict['data'])
-    artifact = np.array(datadict['artifact'])
     sr = np.array(datadict['sr'])
-
-    baseline = data[0:250,:,:]
+    baseline = data[tstart:tend,:,:]
     n = baseline.shape[0]
     ntrials = baseline.shape[2]
+    nchans = baseline.shape[1]
+
     hann = np.hanning(n)
     newbaseline = np.zeros((n, baseline.shape[1],ntrials))
     for i in range(0,ntrials):
         hann2d = np.tile(hann, (129,1)).T
         newbaseline[:,:,i] = baseline[:,:,i]*hann2d
-    basef = fft(baseline, axis=0)
+    basef = fft(newbaseline, axis=0)
     f = 1000 * np.arange(0, n / 2) / n
-    bl_low, bl_alphaLow, bl_alphaHigh, bl_high = np.abs(basef[1,:,:]/n)**2,np.abs(basef[2,:,:]/n)**2,np.abs(basef[3,:,:]/n)**2, np.mean(np.abs(basef[5:7,:,:]/n)**2, axis=0)
-    return basef, bl_low, bl_alphaLow, bl_alphaHigh, bl_high
+    bl_theta, bl_alphaLow, bl_alphaHigh, bl_betaLow, bl_betaHigh = \
+        np.abs(basef[1,:,:]/n)**2,np.abs(basef[2,:,:]/n)**2,np.abs(basef[3,:,:]/n)**2, \
+        np.mean(np.abs(basef[4:6,:,:]/n)**2, axis=0), np.mean(np.abs(basef[6:8,:,:]/n)**2, axis=0)
+    return basef, bl_theta, bl_alphaLow, bl_alphaHigh, bl_betaLow, bl_betaHigh
 
 
-
-
-np.save(path+'/alphaDC', subject_bycond)
-np.save(path+'/alphaDC', subject_rt)
-
-def makeplots():
-    conditionpower  = np.mean(subject_bycond, axis=0)
-     label = ['easy','medium','hard']
+timev = np.arange(-750,1250,10)
+# plots by condition
+def plotcond(data_sub):
+    if len(data_sub.shape) > 3:
+        subjdata = np.mean(data_sub, axis=0)
+    else:
+        subjdata = data_sub
+    fig, ax = plt.subplots(1,subjdata.shape[2],figsize=(24,5))
+    label = ['easy','medium','hard']
+    title = ['theta(3-5Hz)', 'low alpha(7-9Hz)', 'high alpha(11-13Hz)', 'low beta(15-21Hz)', 'high beta(23-29Hz)']
     # label = ['fast','medium','slow']
-
-    timev = np.arange(-1150,1500,10)
-    fig, ax = plt.subplots(1,3)
-
-    for i in range(0, 3):
-        x = conditionpower[10:275, i, 1]
-        x = x - np.mean(x)
+    for j in range(0,5):
+        for i in range(0, 3):
+            x = subjdata[50:250, i, j]
+        # x = x - np.mean(x)
         # x = x - np.mean(x[100:125])
-        ax[0].plot(timev,x, label=label[i])
-        ax[0].legend()
-        ax[0].axvline(0,ls='--',color='grey')
-        ax[0].axhline(0, ls='--', color='grey')
-        ax[0].set_title('low alpha (6-10Hz)')
-        ax[0].set_xlabel('Time(ms)')
+            ax[j].plot(timev,x, label=label[i])
+            ax[j].axvline(0,ls='--',color='grey')
+            ax[j].axhline(0, ls='--', color='grey')
+            ax[j].legend()
+            ax[j].set_title(title[j])
+            ax[j].set_xlabel('Time(ms)')
+            ax[j].xaxis.set_ticks(np.arange(-750, 1250, 250))
+    fig.suptitle('Stimulus-Locked Desynchronization by Condition (')
+    fig.savefig(path + 'alphaDC/plots/bycond_test')
+    # plt.close(fig)
 
 
-
-    for i in range(0, 3):
-        x = conditionpower[10:275, i, 2]
-        x = x - np.mean(x)
+# plots by RT
+def plotrt(data_sub):
+    if len(data_sub.shape) > 3:
+        subjdata = np.mean(data_sub, axis=0)
+    else:
+        subjdata = data_sub
+    fig, ax = plt.subplots(1,subjdata.shape[2],figsize=(24,5))
+    label = ['fast','mid','slow']
+    title = ['theta(3-5Hz)', 'low alpha(7-9Hz)', 'high alpha(11-13Hz)', 'low beta(15-21Hz)', 'high beta(23-29Hz)']
+    # label = ['fast','medium','slow']
+    for j in range(0,5):
+        for i in range(0, 3):
+            x = subjdata[50:250, i, j]
+        # x = x - np.mean(x)
         # x = x - np.mean(x[100:125])
-        ax[1].plot(timev,x, label=label[i])
-        ax[1].legend()
-        ax[1].axvline(0,ls='--',color='grey')
-        ax[1].axhline(0, ls='--', color='grey')
-        ax[1].set_title('high alpha (11-14Hz)')
-        ax[1].set_xlabel('Time(ms)')
+            ax[j].plot(timev,x, label=label[i])
+            ax[j].axvline(0,ls='--',color='grey')
+            ax[j].axhline(0, ls='--', color='grey')
+            ax[j].legend()
+            ax[j].set_title(title[j])
+            ax[j].set_xlabel('Time(ms)')
+            ax[j].xaxis.set_ticks(np.arange(-750, 1250, 250))
+    fig.suptitle('Stimulus-Locked Desynchronization by RT')
+    fig.savefig(path + 'alphaDC/plots/byrt_test')
+    # plt.close(fig)
+
+# plots by correct
+def plotacc(data_sub):
+    if len(data_sub.shape) > 3:
+        subjdata = np.mean(data_sub, axis=0)
+    else:
+        subjdata = data_sub
+    fig, ax = plt.subplots(1, subjdata.shape[2],figsize=(24,5))
+    label = ['incorrect','correct']
+    title = ['theta(3-5Hz)', 'low alpha(7-9Hz)', 'high alpha(11-13Hz)', 'low beta(15-21Hz)', 'high beta(23-29Hz)']
+        # label = ['fast','medium','slow']
+    for j in range(0, 5):
+        for i in range(0, 2):
+            x = subjdata[50:250, i, j]
+            ax[j].plot(timev, x, label=label[i])
+            ax[j].axvline(0, ls='--', color='grey')
+            ax[j].axhline(0, ls='--', color='grey')
+            ax[j].legend()
+            ax[j].set_title(title[j])
+            ax[j].set_xlabel('Time(ms)')
+            ax[j].xaxis.set_ticks(np.arange(-750, 1250, 250))
+    fig.suptitle('Stimulus-Locked Desynchronization by Accuracy')
+    fig.savefig(path + 'alphaDC/plots/byacc_test')
+    # plt.close(fig)
+
+def plotaccrt(data_sub):
+    if len(data_sub.shape) > 3:
+        subjdata = np.mean(data_sub, axis=0)
+    else:
+        subjdata = data_sub
+    fig, ax = plt.subplots(1, subjdata.shape[2],figsize=(24,5))
+    label = ['fast incorrect', 'fast correct', 'slow incorrect','slow correct']
+    title = ['theta(3-5Hz)', 'low alpha(7-9Hz)', 'high alpha(11-13Hz)', 'low beta(15-21Hz)', 'high beta(23-29Hz)']
+    for j in range(0, 5):
+        for i in range(0, 4):
+            x = subjdata[50:250, i, j]
+            ax[j].plot(timev, x, label=label[i])
+            ax[j].axvline(0, ls='--', color='grey')
+            ax[j].axhline(0, ls='--', color='grey')
+            ax[j].legend()
+            ax[j].set_title(title[j])
+            ax[j].set_xlabel('Time(ms)')
+            ax[j].xaxis.set_ticks(np.arange(-750, 1250, 250))
+    fig.suptitle('Stimulus-Locked Desynchronization by Accuracy and RT')
+    fig.savefig(path + 'alphaDC/plots/byaccrt_test')
+    # plt.close(fig)
 
 
-    for i in range(0, 3):
-        x = conditionpower[10:275, i, 0]
-        x = x - np.mean(x)
-        # x = x - np.mean(x[100:125])
-        ax[2].plot(timev,x, label=label[i])
-        ax[2].legend()
-        ax[2].axvline(0,ls='--',color='grey')
-        ax[2].axhline(0, ls='--', color='grey')
-        ax[2].set_title('low band (2-4Hz)')
-        ax[2].set_xlabel('Time(ms)')
 
-    fig.suptitle('Stimulus-Locked Desynchronization by Cond (corrected)')
+nband = 5
+subject_bycond= np.zeros((len(subIDs),400,3,nband))
+subject_rt = np.zeros((len(subIDs),400,3,nband))
+subject_acc = np.zeros((len(subIDs),400,2,nband))
+subject_accrt = np.zeros((len(subIDs),400,4,nband))
 
+count = 0
+for sub in subIDs:
+    _, conditionpower,rtpower, accpower, accrtpower=alphadc(sub,allchan = False, channame = 'out.lpf')
+    subject_bycond[count,:,:,:]=conditionpower
+    subject_rt[count,:,:,:]=rtpower
+    subject_acc[count,:,:,:]=accpower
+    subject_accrt[count,:,:,:]=accrtpower
+    count +=1
+
+np.save(path + 'alphaDC/'+'/subject_bycondlpf', subject_bycond)
+np.save(path + 'alphaDC/'+'/subject_rtlpf', subject_rt)
+np.save(path + 'alphaDC/'+'/subject_acclpf', subject_acc)
+np.save(path + 'alphaDC/'+'/subject_accrtlpf', subject_accrt)
+
+subject_bycond = np.load(path + 'alphaDC/'+'subject_bycond.npy')
+subject_rt = np.load(path + 'alphaDC/'+'subject_rt.npy')
+subject_acc = np.load(path + 'alphaDC/'+'subject_acc.npy')
+subject_accrt = np.load(path + 'alphaDC/'+'subject_accrt.npy')
+
+plotcond(subject_bycond)
+plotrt(subject_rt)
+plotacc((subject_acc))
+plotaccrt(subject_accrt)
+
+
+for i in range(0,10):
+    np.delete(subject_bycond, 7, axis=0)
+    plotcond(subject_bycond[i,:,:,:])
 
 
