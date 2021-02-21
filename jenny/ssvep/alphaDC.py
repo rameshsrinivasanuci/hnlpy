@@ -20,6 +20,7 @@ from scipy import signal
 import os
 from pymatreader import read_mat
 from hdf5storage import savemat
+from hdf5storage import loadmat
 #%%
 # import lab modules
 import timeop
@@ -32,6 +33,7 @@ subIDs.remove('s236_ses1_')
 
 
 def freqbands():
+    '''this function defines the frequencies averaged for each frequency band'''
     theta = [3,4,5]
     lowalpha = [7,8,9]
     highalpha = [11,12,13]
@@ -42,7 +44,9 @@ def freqbands():
     return bandlist, bandnames
 
 def alphadc(subID, allchan=True, channame=None):
-    '''channame would be 'out.lc' as an example'''
+    '''this function baseline correct each electrode each trial
+    allchan = True, channame = None means it's using all good chans
+    allchan = False, channame = 'out.lpf' means using left prefrontal electrodes'''
     path = '/home/jenny/pdmattention/'
     _, bl_theta, bl_alphaLow, bl_alphaHigh, bl_betaLow, bl_betaHigh = baselinefreq(subID, 0, 250)
     spec = loadmat(path + 'task3/'+'spectrogram/' + subID + 'spectrogram.mat')
@@ -85,9 +89,8 @@ def alphadc(subID, allchan=True, channame=None):
             for i in range(nband):
                 relativepower = np.abs(chansgram[freqind[i],:])**2 / chanbl[i]
                 relativepower = np.mean(relativepower, axis=0) # this is per electrode per trial per frequency band
-
                 alphaDC[i,:,c,t] = relativepower
-    # np.save(path +'/alphaDC' + '/desynch_%s'% subID[0:5], alphaDC)
+    np.save(path +'/alphaDC' + '/desynch_%s'% subID[0:5], alphaDC)
     alpha2 = alphaDC[:,:,goodchans,:]
 
     alpha3 = alpha2[:,:,:,goodtrials]
@@ -132,9 +135,6 @@ def alphadc(subID, allchan=True, channame=None):
 
     # return conditionpower, rtpower
 
-
-
-
 def baselinefreq(subID, tstart,tend):
     '''this function returns raw fft coeficient for the baseline, and the power at 4Hz, 8Hz, 12Hz, 16&20, 24&28 at each channel for each trial
     tstart is where the baseline starts'''
@@ -161,7 +161,7 @@ def baselinefreq(subID, tstart,tend):
         np.mean(np.abs(basef[4:6,:,:]/n)**2, axis=0), np.mean(np.abs(basef[6:8,:,:]/n)**2, axis=0)
     return basef, bl_theta, bl_alphaLow, bl_alphaHigh, bl_betaLow, bl_betaHigh
 
-
+###################################### plots ################################333
 timev = np.arange(-750,1250,10)
 # plots by condition
 def plotcond(data_sub):
@@ -263,6 +263,9 @@ def plotaccrt(data_sub):
     # plt.close(fig)
 
 
+#################################################
+
+# get for all subjects
 
 nband = 5
 subject_bycond= np.zeros((len(subIDs),400,3,nband))
@@ -272,22 +275,22 @@ subject_accrt = np.zeros((len(subIDs),400,4,nband))
 
 count = 0
 for sub in subIDs:
-    _, conditionpower,rtpower, accpower, accrtpower=alphadc(sub,allchan = False, channame = 'out.lpf')
+    _, conditionpower,rtpower, accpower, accrtpower=alphadc(sub, allchan = Fasle, channame = None)
     subject_bycond[count,:,:,:]=conditionpower
     subject_rt[count,:,:,:]=rtpower
     subject_acc[count,:,:,:]=accpower
     subject_accrt[count,:,:,:]=accrtpower
     count +=1
 
-np.save(path + 'alphaDC/'+'/subject_bycondlpf', subject_bycond)
-np.save(path + 'alphaDC/'+'/subject_rtlpf', subject_rt)
-np.save(path + 'alphaDC/'+'/subject_acclpf', subject_acc)
-np.save(path + 'alphaDC/'+'/subject_accrtlpf', subject_accrt)
+np.save(path + 'alphaDC/'+'/subject_bycond_all', subject_bycond)
+np.save(path + 'alphaDC/'+'/subject_rt_all', subject_rt)
+np.save(path + 'alphaDC/'+'/subject_acc_all', subject_acc)
+np.save(path + 'alphaDC/'+'/subject_accrt_all', subject_accrt)
 
-subject_bycond = np.load(path + 'alphaDC/'+'subject_bycond.npy')
-subject_rt = np.load(path + 'alphaDC/'+'subject_rt.npy')
-subject_acc = np.load(path + 'alphaDC/'+'subject_acc.npy')
-subject_accrt = np.load(path + 'alphaDC/'+'subject_accrt.npy')
+subject_bycond = np.load(path + 'alphaDC/'+'subject_bycond_all.npy')
+subject_rt = np.load(path + 'alphaDC/'+'subject_rt_all.npy')
+subject_acc = np.load(path + 'alphaDC/'+'subject_acc_all.npy')
+subject_accrt = np.load(path + 'alphaDC/'+'subject_accrt_all.npy')
 
 plotcond(subject_bycond)
 plotrt(subject_rt)

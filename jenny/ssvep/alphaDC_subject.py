@@ -24,42 +24,6 @@ ind = np.arange(0,33,3)
 timev = np.arange(-500, 1250, 10)
 title = ['theta', 'low alpha', 'high alpha', 'low beta', 'high beta']
 
-for i in range(0,11):
-    subID = subIDs[ind[i]:ind[i]+3]
-    fig, ax = plt.subplots(1, 3, figsize=(18,5))
-    count=0
-    for sub in subID:
-        subalpha = subjAlpha(sub)
-        for j in range(subalpha.shape[0]):
-            ax[count].plot(timev, np.mean(subalpha[j, 75:250, :, :], axis=(1, 2)).T, label=title[j])
-            ax[count].legend()
-            ax[count].set_title('%s'%sub[0:5])
-        count += 1
-    fig.savefig(path +'alphaDC/plots/%s'%sub[0:5])
-
-for i in range(0,11):
-    subID = subIDs[ind[i]:ind[i]+3]
-    fig, ax = plt.subplots(1, 3, figsize=(18,5))
-    count=0
-    for sub in subID:
-        subalpha = subjAlpha(sub)
-        for j in range(subalpha.shape[0]):
-            ax[count].plot(timev, np.mean(subalpha[j, 75:250, :, :], axis=(1, 2)).T, label=title[j])
-            ax[count].legend()
-            ax[count].set_title('%s'%sub[0:5])
-        count += 1
-    fig.savefig(path +'alphaDC/plots/%s'%sub[0:5])
-
-# loop thourgh each subjects and generate plots for each condition
-for sub in subIDs:
-    _, conditionpower,rtpower, accpower, accrtpower=alphadc(sub)
-    plotcond(subject_bycond)
-    plotrt(subject_rt)
-    plotacc(subject_acc)
-    plotaccrt(subject_accrt)
-
-
-
 def subjAlpha(subID):
     spec = loadmat(path + 'task3/'+'spectrogram/' + subID + 'spectrogram.mat')
     frequencies=spec['frequencies'].astype(int)
@@ -72,12 +36,47 @@ def subjAlpha(subID):
     alphaDC3 = alphaDC2[:,:,:,goodtrials]
     return alphaDC3
 
-    timev = np.arange(-500, 1250, 10)
-    fig, ax = plt.subplots(1)
-    title = ['theta(3-5Hz)', 'low alpha(7-9Hz)', 'high alpha(11-13Hz)', 'low beta(15-21Hz)', 'high beta(23-29Hz)']
-    for i in range(alphaDC3.shape[0]):
-        ax.plot(timev, np.mean(alphaDC3[i,75:250,:,:], axis = (1,2)).T, label = title[i])
-        ax.legend()
+# timev = np.arange(-500, 1250, 10)
+# fig, ax = plt.subplots(1)
+# title = ['theta(3-5Hz)', 'low alpha(7-9Hz)', 'high alpha(11-13Hz)', 'low beta(15-21Hz)', 'high beta(23-29Hz)']
+# for i in range(alphaDC3.shape[0]):
+#     ax.plot(timev, np.mean(alphaDC3[i,75:250,:,:], axis = (1,2)).T, label = title[i])
+#     ax.legend()
+
+for i in range(0, 11):
+    subID = subIDs[ind[i]:ind[i] + 3]
+    fig, ax = plt.subplots(1, 3, figsize=(18, 5))
+    count = 0
+    for sub in subID:
+        subalpha = subjAlpha(sub)
+        for j in range(subalpha.shape[0]):
+            ax[count].plot(timev, np.mean(subalpha[j, 75:250, :, :], axis=(1, 2)).T, label=title[j])
+            ax[count].legend()
+            ax[count].set_title('%s' % sub[0:5])
+        count += 1
+    fig.savefig(path + 'alphaDC/plots/%s' % sub[0:5])
+
+for i in range(0, 11):
+    subID = subIDs[ind[i]:ind[i] + 3]
+    fig, ax = plt.subplots(1, 3, figsize=(18, 5))
+    count = 0
+    for sub in subID:
+        subalpha = subjAlpha(sub)
+        for j in range(subalpha.shape[0]):
+            ax[count].plot(timev, np.mean(subalpha[j, 75:250, :, :], axis=(1, 2)).T, label=title[j])
+            ax[count].legend()
+            ax[count].set_title('%s' % sub[0:5])
+        count += 1
+    fig.savefig(path + 'alphaDC/plots/%s' % sub[0:5])
+
+# loop thourgh each subjects and generate plots for each condition
+for sub in subIDs:
+    _, conditionpower, rtpower, accpower, accrtpower = alphadc(sub)
+    plotcond(subject_bycond)
+    plotrt(subject_rt)
+    plotacc(subject_acc)
+    plotaccrt(subject_accrt)
+
     # # by condition
     # conditionpower = np.zeros((nt, ncond, nband))
     # for k in range(ncond):
