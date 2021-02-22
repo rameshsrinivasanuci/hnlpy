@@ -31,6 +31,9 @@ path = '/home/jenny/pdmattention/'
 subIDs = choose_subs(1, path + 'task3')
 subIDs.remove('s236_ses1_')
 
+# subIDs.remove('s198_ses1_')
+# subIDs.remove('s218_ses2_')
+# subIDs.remove('s210_ses1_')
 
 def freqbands():
     '''this function defines the frequencies averaged for each frequency band'''
@@ -88,9 +91,9 @@ def alphadc(subID, allchan=True, channame=None):
             chanbl = baseline[:,c,t]
             for i in range(nband):
                 relativepower = np.abs(chansgram[freqind[i],:])**2 / chanbl[i]
-                relativepower = np.mean(relativepower, axis=0) # this is per electrode per trial per frequency band
+                relativepower = np.median(relativepower, axis=0) # this is per electrode per trial per frequency band
                 alphaDC[i,:,c,t] = relativepower
-    np.save(path +'/alphaDC' + '/desynch_%s'% subID[0:5], alphaDC)
+    # np.save(path +'/alphaDC' + '/desynch_%s'% subID[0:5], alphaDC)
     alpha2 = alphaDC[:,:,goodchans,:]
 
     alpha3 = alpha2[:,:,:,goodtrials]
@@ -99,7 +102,7 @@ def alphadc(subID, allchan=True, channame=None):
     conditionpower = np.zeros((nt, ncond, nband))
     for k in range(ncond):
         trials = np.intersect1d(np.where(condition == k+1)[0],goodtrials)
-        alpha = np.mean(alpha2[:,:,:,trials], axis=(2,3))
+        alpha = np.median(alpha2[:,:,:,trials], axis=(2,3))
         conditionpower[:,k,:] = alpha.T
 
     # by RT
@@ -107,14 +110,14 @@ def alphadc(subID, allchan=True, channame=None):
     for k in range(3):
         npercond = np.floor(len(goodtrials)/3)
         trials = [j for i, j in enumerate(goodtrials) if i in np.arange(npercond*k,npercond*k+npercond,1)]
-        alpha = np.mean(alpha2[:,:,:,trials], axis=(2,3))
+        alpha = np.median(alpha2[:,:,:,trials], axis=(2,3))
         rtpower[:, k, :] = alpha.T
 
-    # by accruacy
+    # by accuracy
     accpower = np.zeros((nt,2,nband))
     for k in range(0,2):
         trials = np.intersect1d(np.where(correct == k)[0], goodtrials)
-        alpha = np.mean(alpha2[:,:,:,trials], axis=(2,3))
+        alpha = np.median(alpha2[:,:,:,trials], axis=(2,3))
         accpower[:,k,:] = alpha.T
 
     # by four condition
@@ -124,11 +127,11 @@ def alphadc(subID, allchan=True, channame=None):
     slowtrials = goodtrials[int(nhalf):]
     for k in range(0,2):
         trials = np.intersect1d(np.where(correct == k)[0], fasttrials)
-        alpha = np.mean(alpha2[:,:,:,trials], axis=(2,3))
+        alpha = np.median(alpha2[:,:,:,trials], axis=(2,3))
         accrtpower[:,k,:] = alpha.T
     for k in range(0, 2):
         trials = np.intersect1d(np.where(correct == k)[0], slowtrials)
-        alpha = np.mean(alpha2[:, :, :, trials], axis=(2, 3))
+        alpha = np.median(alpha2[:, :, :, trials], axis=(2, 3))
         accrtpower[:, k+2, :] = alpha.T
 
     return alphaDC, conditionpower,rtpower, accpower, accrtpower
@@ -263,10 +266,9 @@ def plotaccrt(data_sub):
     # plt.close(fig)
 
 
-#################################################
+############################################################################
 
-# get for all subjects
-
+# get all subjects
 nband = 5
 subject_bycond= np.zeros((len(subIDs),400,3,nband))
 subject_rt = np.zeros((len(subIDs),400,3,nband))
@@ -275,17 +277,18 @@ subject_accrt = np.zeros((len(subIDs),400,4,nband))
 
 count = 0
 for sub in subIDs:
-    _, conditionpower,rtpower, accpower, accrtpower=alphadc(sub, allchan = Fasle, channame = None)
+    _, conditionpower,rtpower, accpower, accrtpower = alphadc(sub, allchan = True, channame = None)
     subject_bycond[count,:,:,:]=conditionpower
     subject_rt[count,:,:,:]=rtpower
     subject_acc[count,:,:,:]=accpower
     subject_accrt[count,:,:,:]=accrtpower
     count +=1
+    print('%d' %  count, '/', '%d'%len(subIDs))
 
-np.save(path + 'alphaDC/'+'/subject_bycond_all', subject_bycond)
-np.save(path + 'alphaDC/'+'/subject_rt_all', subject_rt)
-np.save(path + 'alphaDC/'+'/subject_acc_all', subject_acc)
-np.save(path + 'alphaDC/'+'/subject_accrt_all', subject_accrt)
+np.save(path + 'alphaDC/'+'/subject_bycond_lf', subject_bycond)
+np.save(path + 'alphaDC/'+'/subject_rt_lf', subject_rt)
+np.save(path + 'alphaDC/'+'/subject_acc_lf', subject_acc)
+np.save(path + 'alphaDC/'+'/subject_accrt_lf', subject_accrt)
 
 subject_bycond = np.load(path + 'alphaDC/'+'subject_bycond_all.npy')
 subject_rt = np.load(path + 'alphaDC/'+'subject_rt_all.npy')
@@ -296,10 +299,4 @@ plotcond(subject_bycond)
 plotrt(subject_rt)
 plotacc((subject_acc))
 plotaccrt(subject_accrt)
-
-
-for i in range(0,10):
-    np.delete(subject_bycond, 7, axis=0)
-    plotcond(subject_bycond[i,:,:,:])
-
 
