@@ -3,10 +3,14 @@
 """
 Created on Sun Feb 10 16:05:45 2020
 
-@author: jenny
+@author: Jenny Sun
 """
 
-# this scripts contain functions for alpha DC analysis
+'''
+this script contains functions for alpha DC analysis, including baseline correction
+by different condition
+and plotting functions
+'''
 
 from pymatreader import read_mat
 import numpy as np
@@ -36,7 +40,7 @@ subIDs.remove('s236_ses1_')
 # subIDs.remove('s210_ses1_')
 
 def freqbands():
-    '''this function defines the frequencies averaged for each frequency band'''
+    '''Defines the frequencies averaged for each frequency band'''
     theta = [3,4,5]
     lowalpha = [7,8,9]
     highalpha = [11,12,13]
@@ -46,10 +50,19 @@ def freqbands():
     bandlist = [theta, lowalpha, highalpha, lowtheta,hightheta]
     return bandlist, bandnames
 
-def alphadc(subID, allchan=True, channame=None):
-    '''this function baseline correct each electrode each trial
-    allchan = True, channame = None means it's using all good chans
-    allchan = False, channame = 'out.lpf' means using left prefrontal electrodes'''
+def alphadc(subID, allchan=True, channame=None, save=False):
+    '''this function baseline corrects each electrode each trial
+    Args:
+        allchan     : bool, include all channels if true (default)
+        channame    : string, 'out.lpf' as an example for left prefrontal electrodes
+        save        : bool, save out the alphaDC matrix or not
+    Returns:
+        alphaDC          : nbands x times x all chans x all trials matrix, baseline corrected for each subjectr
+        conditionpower   : times x ncondition x nbands matrix
+        rtpower          : times x rt groups x nbands matrix
+        accpower         : times x correct/incorrect x nbands matrix
+        accrtpower       : times x correct fast/ incorrect fast/ correct slow/ incorrect slow x nbands matrix
+    '''
     path = '/home/jenny/pdmattention/'
     _, bl_theta, bl_alphaLow, bl_alphaHigh, bl_betaLow, bl_betaHigh = baselinefreq(subID, 0, 250)
     spec = loadmat(path + 'task3/'+'spectrogram/' + subID + 'spectrogram.mat')
@@ -93,7 +106,8 @@ def alphadc(subID, allchan=True, channame=None):
                 relativepower = np.abs(chansgram[freqind[i],:])**2 / chanbl[i]
                 relativepower = np.median(relativepower, axis=0) # this is per electrode per trial per frequency band
                 alphaDC[i,:,c,t] = relativepower
-    # np.save(path +'/alphaDC' + '/desynch_%s'% subID[0:5], alphaDC)
+    if save is True:
+        np.save(path +'/alphaDC' + '/desynch_%s'% subID[0:5], alphaDC)
     alpha2 = alphaDC[:,:,goodchans,:]
 
     alpha3 = alpha2[:,:,:,goodtrials]
@@ -133,14 +147,18 @@ def alphadc(subID, allchan=True, channame=None):
         trials = np.intersect1d(np.where(correct == k)[0], slowtrials)
         alpha = np.median(alpha2[:, :, :, trials], axis=(2, 3))
         accrtpower[:, k+2, :] = alpha.T
-
-    return alphaDC, conditionpower,rtpower, accpower, accrtpower
+    if type(channame) is type(None):
+        channame = 'out.allchans'
+    return alphaDC, conditionpower,rtpower, accpower, accrtpower, channame
 
     # return conditionpower, rtpower
 
 def baselinefreq(subID, tstart,tend):
     '''this function returns raw fft coeficient for the baseline, and the power at 4Hz, 8Hz, 12Hz, 16&20, 24&28 at each channel for each trial
-    tstart is where the baseline starts'''
+    tstart is where the baseline starts
+    Args:
+        tstart  : start time for baseline
+        tend    : end timem for baseline'''
     path = '/home/jenny/pdmattention/task3/'
     currentSub = subID[0:4]
     print('Current Subject: ', currentSub)
@@ -158,18 +176,33 @@ def baselinefreq(subID, tstart,tend):
         hann2d = np.tile(hann, (129,1)).T
         newbaseline[:,:,i] = baseline[:,:,i]*hann2d
     basef = fft(newbaseline, axis=0)
-    f = 1000 * np.arange(0, n / 2) / n
+    f = sr * np.arange(0, n / 2) / n
     bl_theta, bl_alphaLow, bl_alphaHigh, bl_betaLow, bl_betaHigh = \
         np.abs(basef[1,:,:]/n)**2,np.abs(basef[2,:,:]/n)**2,np.abs(basef[3,:,:]/n)**2, \
         np.mean(np.abs(basef[4:6,:,:]/n)**2, axis=0), np.mean(np.abs(basef[6:8,:,:]/n)**2, axis=0)
     return basef, bl_theta, bl_alphaLow, bl_alphaHigh, bl_betaLow, bl_betaHigh
 
 ###################################### plots ################################333
-timev = np.arange(-750,1250,10)
+
 # plots by condition
-def plotcond(data_sub):
+def plotcond(data_sub, electrode, mean = True):
+    '''
+    args:
+    data_sub  : numpy array. subject x time x condition x frequency band matrix
+                it can take it when subject is 1
+    electrode:  str.  out.lp would be an example of left parietal lobe
+    mean:     bool. default to be true, so the average is calculated by the mean across
+                subjects. If true, takes the median. '''
+
+    timev = np.arange(-750, 1250, 10)
+    channame = electrode[4:]
     if len(data_sub.shape) > 3:
-        subjdata = np.mean(data_sub, axis=0)
+        if mean is False:
+            subjdata = np.median(data_sub, axis=0)
+            print('median is run')
+        else:
+            subjdata = np.mean(data_sub, axis=0)
+            print('mean is run')
     else:
         subjdata = data_sub
     fig, ax = plt.subplots(1,subjdata.shape[2],figsize=(24,5))
@@ -188,15 +221,22 @@ def plotcond(data_sub):
             ax[j].set_title(title[j])
             ax[j].set_xlabel('Time(ms)')
             ax[j].xaxis.set_ticks(np.arange(-750, 1250, 250))
-    fig.suptitle('Stimulus-Locked Desynchronization by Condition (')
-    fig.savefig(path + 'alphaDC/plots/bycond_test')
-    # plt.close(fig)
+    fig.suptitle('Stimulus-Locked Desynchronization by Condition')
+    fig.savefig(path + 'alphaDC/plots/bycond_'+ channame,dpi=300, format = 'png', bbox_inches = 'tight')
+    plt.close(fig)
 
 
 # plots by RT
-def plotrt(data_sub):
+def plotrt(data_sub, electrode, mean = True):
+    timev = np.arange(-750, 1250, 10)
+    channame = electrode[4:]
     if len(data_sub.shape) > 3:
-        subjdata = np.mean(data_sub, axis=0)
+        if mean is False:
+            subjdata = np.median(data_sub, axis=0)
+            print('median is run')
+        else:
+            subjdata = np.mean(data_sub, axis=0)
+            print('mean is run')
     else:
         subjdata = data_sub
     fig, ax = plt.subplots(1,subjdata.shape[2],figsize=(24,5))
@@ -216,13 +256,20 @@ def plotrt(data_sub):
             ax[j].set_xlabel('Time(ms)')
             ax[j].xaxis.set_ticks(np.arange(-750, 1250, 250))
     fig.suptitle('Stimulus-Locked Desynchronization by RT')
-    fig.savefig(path + 'alphaDC/plots/byrt_test')
-    # plt.close(fig)
+    fig.savefig(path + 'alphaDC/plots/byrt_' + channame,dpi=300, format = 'png', bbox_inches = 'tight')
+    plt.close(fig)
 
 # plots by correct
-def plotacc(data_sub):
+def plotacc(data_sub, electrode, mean = True):
+    timev = np.arange(-750, 1250, 10)
+    channame = electrode[4:]
     if len(data_sub.shape) > 3:
-        subjdata = np.mean(data_sub, axis=0)
+        if mean is False:
+            subjdata = np.median(data_sub, axis=0)
+            print('median is run')
+        else:
+            subjdata = np.mean(data_sub, axis=0)
+            print('mean is run')
     else:
         subjdata = data_sub
     fig, ax = plt.subplots(1, subjdata.shape[2],figsize=(24,5))
@@ -240,12 +287,19 @@ def plotacc(data_sub):
             ax[j].set_xlabel('Time(ms)')
             ax[j].xaxis.set_ticks(np.arange(-750, 1250, 250))
     fig.suptitle('Stimulus-Locked Desynchronization by Accuracy')
-    fig.savefig(path + 'alphaDC/plots/byacc_test')
-    # plt.close(fig)
+    fig.savefig(path + 'alphaDC/plots/byacc_'+ channame, dpi=300, format = 'png', bbox_inches = 'tight')
+    plt.close(fig)
 
-def plotaccrt(data_sub):
+def plotaccrt(data_sub, electrode, mean = True):
+    timev = np.arange(-750, 1250, 10)
+    channame = electrode[4:]
     if len(data_sub.shape) > 3:
-        subjdata = np.mean(data_sub, axis=0)
+        if mean is False:
+            subjdata = np.median(data_sub, axis=0)
+            print('median is run')
+        else:
+            subjdata = np.mean(data_sub, axis=0)
+            print('mean is run')
     else:
         subjdata = data_sub
     fig, ax = plt.subplots(1, subjdata.shape[2],figsize=(24,5))
@@ -262,22 +316,48 @@ def plotaccrt(data_sub):
             ax[j].set_xlabel('Time(ms)')
             ax[j].xaxis.set_ticks(np.arange(-750, 1250, 250))
     fig.suptitle('Stimulus-Locked Desynchronization by Accuracy and RT')
-    fig.savefig(path + 'alphaDC/plots/byaccrt_test')
-    # plt.close(fig)
+    fig.savefig(path + 'alphaDC/plots/byaccrt_'+ channame, dpi=300, format = 'png', bbox_inches = 'tight')
+    plt.close(fig)
 
 
 ############################################################################
 
+
+def saveout(electrode):
+    channame = electrode[4:]
+    np.save(path + 'alphaDC/'+'/subject_bycond_'+channame, subject_bycond)
+    print('bycond_'+channame + ' saved')
+    np.save(path + 'alphaDC/'+'/subject_rt_'+channame, subject_rt)
+    print('byrt_' + channame + ' saved')
+    np.save(path + 'alphaDC/'+'/subject_acc_'+channame, subject_acc)
+    print('byacc_' + channame + ' saved')
+    np.save(path + 'alphaDC/'+'/subject_accrt_'+channame, subject_accrt)
+    print('byaccrt_' + channame + ' saved')
+
+def genplot(electrode, mean = True):
+    if mean is True:
+        mean = True
+    else:
+        mean= False
+    plotcond(subject_bycond, electrode, mean)
+    plotrt(subject_rt,electrode, mean)
+    plotacc(subject_acc,electrode, mean)
+    plotaccrt(subject_accrt,electrode, mean)
+
+
+#################################################################
+####################### analysis code  ##########################
 # get all subjects
 nband = 5
 subject_bycond= np.zeros((len(subIDs),400,3,nband))
 subject_rt = np.zeros((len(subIDs),400,3,nband))
 subject_acc = np.zeros((len(subIDs),400,2,nband))
 subject_accrt = np.zeros((len(subIDs),400,4,nband))
+channame = []
 
 count = 0
 for sub in subIDs:
-    _, conditionpower,rtpower, accpower, accrtpower = alphadc(sub, allchan = True, channame = None)
+    _, conditionpower,rtpower, accpower, accrtpower, channame = alphadc(sub, allchan = False, channame = 'out.lf')
     subject_bycond[count,:,:,:]=conditionpower
     subject_rt[count,:,:,:]=rtpower
     subject_acc[count,:,:,:]=accpower
@@ -285,18 +365,21 @@ for sub in subIDs:
     count +=1
     print('%d' %  count, '/', '%d'%len(subIDs))
 
-np.save(path + 'alphaDC/'+'/subject_bycond_lf', subject_bycond)
-np.save(path + 'alphaDC/'+'/subject_rt_lf', subject_rt)
-np.save(path + 'alphaDC/'+'/subject_acc_lf', subject_acc)
-np.save(path + 'alphaDC/'+'/subject_accrt_lf', subject_accrt)
+# save the output and gen plot
+saveout(channame)
+genplot(channame, mean = True)
 
-subject_bycond = np.load(path + 'alphaDC/'+'subject_bycond_all.npy')
-subject_rt = np.load(path + 'alphaDC/'+'subject_rt_all.npy')
-subject_acc = np.load(path + 'alphaDC/'+'subject_acc_all.npy')
-subject_accrt = np.load(path + 'alphaDC/'+'subject_accrt_all.npy')
 
-plotcond(subject_bycond)
-plotrt(subject_rt)
-plotacc((subject_acc))
-plotaccrt(subject_accrt)
+
+
+# this is the code to load subjects
+def loaddata(electrode):
+    electrode = electrode[4:]
+    subject_bycond = np.load(path + 'alphaDC/'+'subject_bycond_'+electrode+'.npy')
+    subject_rt = np.load(path + 'alphaDC/'+'subject_rt_' + electrode+'.npy')
+    subject_acc = np.load(path + 'alphaDC/'+'subject_acc_' + electrode+'.npy')
+    subject_accrt = np.load(path + 'alphaDC/'+'subject_accrt_'+electrode+'.npy')
+    return subject_bycond, subject_rt, subject_acc, subject_accrt
+
+subject_bycond, subject_rt, subject_acc, subject_accrt = loaddata('out.allchans')
 
