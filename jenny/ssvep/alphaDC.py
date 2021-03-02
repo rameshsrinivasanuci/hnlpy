@@ -106,6 +106,7 @@ def alphadc(subID, allchan=True, channame=None, save=False):
                 relativepower = np.abs(chansgram[freqind[i],:])**2 / chanbl[i]
                 relativepower = np.median(relativepower, axis=0) # this is per electrode per trial per frequency band
                 alphaDC[i,:,c,t] = relativepower
+                alphaDC[i,:,c,t] = relativepower
     if save is True:
         np.save(path +'/alphaDC' + '/desynch_%s'% subID[0:5], alphaDC)
     alpha2 = alphaDC[:,:,goodchans,:]
