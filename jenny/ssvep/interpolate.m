@@ -33,7 +33,7 @@ function interpolate(subID)
     trials = behavdata.trials +1;
     goodtrials = find(artifact1<20);
     if all(ismember(trials, goodtrials))
-        goodtrials = goodtrials;
+        goodtrials = trials;
         final_interp.trialflag = 0;
     else
         goodtrials = trials(ismember(trials, goodtrials));
@@ -47,13 +47,18 @@ function interpolate(subID)
         data(:,interpchans,t)=datain.data(:,interpchans(datain.artifact(interpchans,t)==0),t)*mat';
         final_interp.interp(interpchans(datain.artifact(interpchans,t)==1),t) = 1;
     end
+    
+    % get the channels that are NaN
+    interpchans=setdiff(1:size(chanpos,1),datain.hm.Electrode.NoInterp);
+    
     final_interp.data = data;
     final_interp.artifact = artifact;
-    final_interp.trials = goodtrials;
+    final_interp.trials = goodtrials-1;
     final_interp.sr = sr;
     final_interp.rt = rt;
     final_interp.correct = correct;
     final_interp.condition = condition;
+    final_interp.goodchans = interpchans(1:end-1) -1;
     cd('/home/jenny/pdmattention/task3/final_interp');
     fname = sprintf('%s_final_interp.mat', subID);
     save(fname, '-struct','final_interp');
